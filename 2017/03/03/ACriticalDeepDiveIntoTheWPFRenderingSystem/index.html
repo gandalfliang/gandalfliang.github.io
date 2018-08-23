@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang=zh>
+<head>
+    <meta charset="utf-8">
+    
+    <title>深挖 WPF 渲染系统 | gandalfliang的个人博客</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+    <meta name="description" content="这是一篇2011年的文章，原地址在 A Critical Deep Dive into the WPF Rendering System，个人认为到现在都可以给WPF程序开发人员作为一个参考，里面详细讲述了 WPF 这个号称从底层支持硬件加速的 UI 框架为什么有时候看起来并不是那么回事的原因。以下是正文。
+
+刚开始我并不认为我会发表这篇文章。在被一些我高度重视的人说服后，我决定要发表这篇文章。那">
+<meta property="og:type" content="article">
+<meta property="og:title" content="深挖 WPF 渲染系统">
+<meta property="og:url" content="https://gandalfliang.github.io/2017/03/03/ACriticalDeepDiveIntoTheWPFRenderingSystem/index.html">
+<meta property="og:site_name" content="gandalfliang的个人博客">
+<meta property="og:description" content="这是一篇2011年的文章，原地址在 A Critical Deep Dive into the WPF Rendering System，个人认为到现在都可以给WPF程序开发人员作为一个参考，里面详细讲述了 WPF 这个号称从底层支持硬件加速的 UI 框架为什么有时候看起来并不是那么回事的原因。以下是正文。
+
+刚开始我并不认为我会发表这篇文章。在被一些我高度重视的人说服后，我决定要发表这篇文章。那">
+<meta property="og:image" content="https://jeremiahmorrill.files.wordpress.com/2011/02/clip_image004_thumb.png?w=481&h=476">
+<meta property="og:updated_time" content="2018-02-12T07:23:13.961Z">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="深挖 WPF 渲染系统">
+<meta name="twitter:description" content="这是一篇2011年的文章，原地址在 A Critical Deep Dive into the WPF Rendering System，个人认为到现在都可以给WPF程序开发人员作为一个参考，里面详细讲述了 WPF 这个号称从底层支持硬件加速的 UI 框架为什么有时候看起来并不是那么回事的原因。以下是正文。
+
+刚开始我并不认为我会发表这篇文章。在被一些我高度重视的人说服后，我决定要发表这篇文章。那">
+<meta name="twitter:image" content="https://jeremiahmorrill.files.wordpress.com/2011/02/clip_image004_thumb.png?w=481&h=476">
+    
+
+    
+        <link rel="alternate" href="/atom.xml" title="gandalfliang的个人博客" type="application/atom+xml" />
+    
+
+    
+        <link rel="icon" href="/avatar.png" />
+    
+
+    <link rel="stylesheet" href="/libs/font-awesome/css/font-awesome.min.css">
+    <link rel="stylesheet" href="/libs/open-sans/styles.css">
+    <link rel="stylesheet" href="/libs/source-code-pro/styles.css">
+
+    <link rel="stylesheet" href="/css/style.css">
+
+    <script src="/libs/jquery/2.1.3/jquery.min.js"></script>
+    
+    
+        <link rel="stylesheet" href="/libs/lightgallery/css/lightgallery.min.css">
+    
+    
+        <link rel="stylesheet" href="/libs/justified-gallery/justifiedGallery.min.css">
+    
+    
+    
+    
+
+
+</head>
+
+<body>
+    <div id="container">
+        <header id="header">
+    <div id="header-main" class="header-inner">
+        <div class="outer">
+            <a href="/" id="logo">
+                <i class="logo"></i>
+                <span class="site-title">gandalfliang的个人博客</span>
+            </a>
+            <nav id="main-nav">
+                
+                    <a class="main-nav-link" href="/.">Home</a>
+                
+                    <a class="main-nav-link" href="/archives">Archives</a>
+                
+                    <a class="main-nav-link" href="/categories">Categories</a>
+                
+                    <a class="main-nav-link" href="/tags">Tags</a>
+                
+            </nav>
+            
+                
+                <nav id="sub-nav">
+                    <div class="profile" id="profile-nav">
+                        <a id="profile-anchor" href="javascript:;">
+                            <img class="avatar" src="https://avatars3.githubusercontent.com/u/5707551?v=3&amp;s=460" />
+                            <i class="fa fa-caret-down"></i>
+                        </a>
+                    </div>
+                </nav>
+            
+            <div id="search-form-wrap">
+
+    <form class="search-form">
+        <input type="text" class="ins-search-input search-form-input" placeholder="搜索" />
+        <button type="submit" class="search-form-submit"></button>
+    </form>
+    <div class="ins-search">
+    <div class="ins-search-mask"></div>
+    <div class="ins-search-container">
+        <div class="ins-input-wrapper">
+            <input type="text" class="ins-search-input" placeholder="想要查找什么..." />
+            <span class="ins-close ins-selectable"><i class="fa fa-times-circle"></i></span>
+        </div>
+        <div class="ins-section-wrapper">
+            <div class="ins-section-container"></div>
+        </div>
+    </div>
+</div>
+<script>
+(function (window) {
+    var INSIGHT_CONFIG = {
+        TRANSLATION: {
+            POSTS: '文章',
+            PAGES: '页面',
+            CATEGORIES: '分类',
+            TAGS: '标签',
+            UNTITLED: '(未命名)',
+        },
+        ROOT_URL: '/',
+        CONTENT_URL: '/content.json',
+    };
+    window.INSIGHT_CONFIG = INSIGHT_CONFIG;
+})(window);
+</script>
+<script src="/js/insight.js"></script>
+
+</div>
+        </div>
+    </div>
+    <div id="main-nav-mobile" class="header-sub header-inner">
+        <table class="menu outer">
+            <tr>
+                
+                    <td><a class="main-nav-link" href="/.">Home</a></td>
+                
+                    <td><a class="main-nav-link" href="/archives">Archives</a></td>
+                
+                    <td><a class="main-nav-link" href="/categories">Categories</a></td>
+                
+                    <td><a class="main-nav-link" href="/tags">Tags</a></td>
+                
+                <td>
+                    
+    <div class="search-form">
+        <input type="text" class="ins-search-input search-form-input" placeholder="搜索" />
+    </div>
+
+                </td>
+            </tr>
+        </table>
+    </div>
+</header>
+
+        <div class="outer">
+            
+                
+
+<aside id="profile">
+    <div class="inner profile-inner">
+        <div class="base-info profile-block">
+            <img id="avatar" src="https://avatars3.githubusercontent.com/u/5707551?v=3&amp;s=460" />
+            <h2 id="name">Gandalfliang</h2>
+            <h3 id="title">gandalfliang@outlook.com</h3>
+            <span id="location"><i class="fa fa-map-marker"></i>Guangzhou, China, 单身</span>
+            <!-- <a id="follow" target="_blank" href="undefined">关注我</a> -->
+        </div>
+        <div class="article-info profile-block">
+            <div class="article-info-block">
+                23
+                <span>文章</span>
+            </div>
+            <div class="article-info-block">
+                37
+                <span>标签</span>
+            </div>
+        </div>
+        
+        <div class="profile-block social-links">
+            <table>
+                <tr>
+                    
+                    
+                    <td>
+                        <a href="http://github.com/gandalfliang" target="_blank" title="github" class=tooltip>
+                            <i class="fa fa-github"></i>
+                        </a>
+                    </td>
+                    
+                    <td>
+                        <a href="/atom.xml" target="_blank" title="rss" class=tooltip>
+                            <i class="fa fa-rss"></i>
+                        </a>
+                    </td>
+                    
+                </tr>
+            </table>
+        </div>
+        
+    </div>
+</aside>
+
+            
+            <section id="main"><article id="post-ACriticalDeepDiveIntoTheWPFRenderingSystem" class="article article-type-post" itemscope itemprop="blogPost">
+    <div class="article-inner">
+        
+        
+            <header class="article-header">
+                
+    
+        <h1 class="article-title" itemprop="name">
+            深挖 WPF 渲染系统
+        </h1>
+    
+
+                
+                    <div class="article-meta">
+                        
+    <div class="article-date">
+        <i class="fa fa-calendar"></i>
+        <a href="/2017/03/03/ACriticalDeepDiveIntoTheWPFRenderingSystem/">
+            <time datetime="2017-03-03T07:30:30.000Z" itemprop="datePublished">2017-03-03</time>
+        </a>
+    </div>
+
+
+                        
+    <div class="article-category">
+    	<i class="fa fa-folder"></i>
+        <a class="article-category-link" href="/categories/翻译/">翻译</a>
+    </div>
+
+                        
+    <div class="article-tag">
+        <i class="fa fa-tag"></i>
+        <a class="tag-link" href="/tags/DirectX/">DirectX</a>, <a class="tag-link" href="/tags/GPU/">GPU</a>, <a class="tag-link" href="/tags/WPF/">WPF</a>, <a class="tag-link" href="/tags/渲染/">渲染</a>, <a class="tag-link" href="/tags/翻译/">翻译</a>
+    </div>
+
+                    </div>
+                
+            </header>
+        
+        
+        <div class="article-entry" itemprop="articleBody">
+        
+            
+            <p>这是一篇2011年的文章，原地址在 <a href="https://jeremiahmorrill.wordpress.com/2011/02/14/a-critical-deep-dive-into-the-wpf-rendering-system/" target="_blank" rel="external">A Critical Deep Dive into the WPF Rendering System</a>，个人认为到现在都可以给WPF程序开发人员作为一个参考，里面详细讲述了 WPF 这个号称从底层支持硬件加速的 UI 框架为什么有时候看起来并不是那么回事的原因。以下是正文。</p>
+<hr>
+<p>刚开始我并不认为我会发表这篇文章。在被一些我高度重视的人说服后，我决定要发表这篇文章。那些深入投入微软UX平台的程序员应该更加深入了解这个平台内部是怎么工作的，当他们撞到一睹石墙的时候，他们可以清晰了解到问题所在并且更加准确地沟通他们希望平台做出怎样的改变。</p>
+<h2 id="我相信-WPF-和-Silverlight-是精心打造的技术，但是…"><a href="#我相信-WPF-和-Silverlight-是精心打造的技术，但是…" class="headerlink" title="我相信 WPF 和 Silverlight 是精心打造的技术，但是…"></a><strong>我相信 WPF 和 Silverlight 是精心打造的技术，但是…</strong></h2><p>如果这几个月你有关注我的Twitter，你也许会发现我一直在吐槽WPF（Silverlight也一样）的性能。为什么我会这样做？毕竟这些年我花费了大量的时间为这个平台布道、写库、社区帮助和指导等等。准确来讲，我个人全身投入到这个平台里面，我希望这个平台越来越好。</p>
+<h2 id="性能，性能，性能"><a href="#性能，性能，性能" class="headerlink" title="性能，性能，性能"></a><strong>性能，性能，性能</strong></h2><p>当在开发沉浸式的、消费者导向的UX的时候，性能是你第一位的特性。性能是你添加其他特性的前提和基础。有多少次因为UI太卡你需要缩小UI的规模？有多少次因为这个技术做不到所以你需要丢弃“开创性的UX模型”？有多少次你告诉客户他们需要一个2.4GHz的四核CPU才能获得全部的体验？我一直以来都被客户问，为什么在PC上拥有4倍于iPad的性能的情况下，WPF程序却做不到像iPad应用那般流畅？<br><a id="more"></a></p>
+<h2 id="我觉得-WPF-是有应用硬件加速技术的？告诉我为什么你觉得它效率低。"><a href="#我觉得-WPF-是有应用硬件加速技术的？告诉我为什么你觉得它效率低。" class="headerlink" title="我觉得 WPF 是有应用硬件加速技术的？告诉我为什么你觉得它效率低。"></a><strong>我觉得 WPF 是有应用硬件加速技术的？告诉我为什么你觉得它效率低。</strong></h2><p>WPF是有硬件加速的，并且其内部工作的某些部分也是很简洁的。不幸的是，它并没有像它应该能够做的的那样来高效率地使用GPU。它的渲染系统是非常暴力的。我希望在这里解释我为什么这样说。</p>
+<h2 id="分析一个完整的-WPF-渲染流程"><a href="#分析一个完整的-WPF-渲染流程" class="headerlink" title="分析一个完整的 WPF 渲染流程"></a><strong>分析一个完整的 WPF 渲染流程</strong></h2><p>为了分析性能，我们需要知道WPF底层到底在干什么。要做到这个，我使用“PIX”工具，这是DirectX SDK里的一个Direct3D性能分析工具。PIX会加载基于D3D的程序并向所有的Direct3D调用注入钩子来分析和监控程序。</p>
+<p>我创建了一个简单的WPF程序，里面从左到右有两个圆形。每个圆形有相同的填充色（#55F4F4F5)和一个黑色的描边。如下图：</p>
+<p><img src="https://jeremiahmorrill.files.wordpress.com/2011/02/clip_image001_thumb.png" alt=""></p>
+<h2 id="WPF-程序是怎样渲染这个程序的？"><a href="#WPF-程序是怎样渲染这个程序的？" class="headerlink" title="WPF 程序是怎样渲染这个程序的？"></a><strong>WPF 程序是怎样渲染这个程序的？</strong></h2><p>WPF做的第一件事情是清理出一块需要重新绘制的废弃区域。废弃区域的作用是减少发送给GPU管道中输出合并阶段的像素量。我们甚至可以猜测，这样可以减少需要重新进行曲面细分的多边形数量（稍后会提到）。废弃区域清理后我们的帧看起来像这样：</p>
+<p><img src="https://jeremiahmorrill.files.wordpress.com/2011/02/clip_image002_thumb.png?w=511&amp;h=310" alt=""></p>
+<p>接着，WPF做了某些我不能理解的事情。它首先填充了一个顶点缓存区，然后这就好像在废弃区域上绘制了一个四边形。所以现在的帧看起来是这样的（兴奋吧？）：</p>
+<p><img src="https://jeremiahmorrill.files.wordpress.com/2011/02/clip_image003_thumb.png?w=511&amp;h=310" alt=""></p>
+<p>下一步，它在CPU上对一个圆形进行曲面细分。曲面细分，你或许已经听过，但是重要的是它将我们100X100的圆形多边形变成了一堆三角形。会这样的原因是1）三角形是GPU渲染的基本单位。2）对一个圆形进行曲面细分可能只是几百个顶点，所有它比在CPU上对10000个反锯齿的像素进行栅格化（Silverlight就是如此）要快得多。<br>下图是这次曲面细分看起来的样子。对于熟悉3D编程的人来说，你们或许已经注意到这是一个三角形条带。注意，在曲面细分中圆形看起来并不完整。WPF然后将这次曲面细分的结果加载到GPU顶点缓存区，并根据在xaml中定义的画笔颜色，使用像素着色器来发起另外一个绘制命令。</p>
+<p><img src="https://jeremiahmorrill.files.wordpress.com/2011/02/clip_image004_thumb.png?w=481&amp;h=476" alt=""></p>
+<p>还记得我提到这个圆形开起来是不完整的吗？事实上它的确是。WPF然后生成一种Direct3D程序员知道的“线序列”。GPU像理解三角形一样理解直线。WPF将这些线条填充到一个顶点缓存区中…然后你可以猜到！又发起另外一个绘制调用。这是这些线条集合看起来的样子：</p>
+<p><img src="https://jeremiahmorrill.files.wordpress.com/2011/02/clip_image005_thumb.png?w=474&amp;h=472" alt=""></p>
+<p>所以，WPF已经完成了对圆形的绘制，对吧？并没有！你忘了它还有一条外描边！外描边同样是一个线条集合。这个集合会被发送到GPU的顶点缓存区并且另外一条绘制命令也会被调用。这是描边看起来的样子：</p>
+<p><img src="https://jeremiahmorrill.files.wordpress.com/2011/02/clip_image006_thumb.png?w=476&amp;h=476" alt=""></p>
+<p>到目前为止我们完成了一个圆形的绘制，我们的帧看起来是这样的：</p>
+<p><img src="https://jeremiahmorrill.files.wordpress.com/2011/02/clip_image007_thumb.png?w=511&amp;h=310" alt=""></p>
+<p>这个流程在这个场景下要为每个圆形进行一次。在这里是两个。</p>
+<h2 id="我就不明白了，为什么这样对性能有害？"><a href="#我就不明白了，为什么这样对性能有害？" class="headerlink" title="我就不明白了，为什么这样对性能有害？"></a><strong>我就不明白了，为什么这样对性能有害？</strong></h2><p>你应该注意到的第一件事情是为了绘制一个圆形它需要调用3次绘制。在这3次绘制调用中，相同的顶点缓存区被使用了两次。为了解释为什么只是低效率的，我需要稍微解释一些GPU是怎样工作的。首先，今日的GPU以非常快的速度处理数据并且异步地和CPU一起运行。并且，在确定的操作中存在耗时的用户态到核心态的切换。在这个例子里，在填充顶点缓存区时一定要锁定它。如果当前GPU正在使用缓存区，这样会导致GPU与CPU同步，引起性能瓶颈。顶点缓存区是通过 D3DUSAGE_WRITEONLY | D3DUSAGE_DYNAMIC创建的，但是当它被锁定时（事实上经常发生），D3DLOCK_DISCARD 并没有被使用。如果缓存区正在被GPU使用可能会导致GPU“失速”（CPU与GPU同步）。在存在很多绘制调用的例子中，我们可能有大量的内核过渡和驱动负载。高性能的目标是发送尽量多的工作给GPU，否则你的CPU会忙的要死而GPU却非常空闲。同样，不要忘了在这个例子中我只谈到一帧。典型的WPF UI会尝试在每秒里处理60帧！如果你曾怀疑过那些渲染线程的高CPU占用是从哪里来的，你会发现许多（大部分）是来自GPU驱动。</p>
+<h2 id="那Cached-Composition呢？这真的能提升性能"><a href="#那Cached-Composition呢？这真的能提升性能" class="headerlink" title="那Cached Composition呢？这真的能提升性能"></a><strong>那Cached Composition呢？这真的能提升性能</strong></h2><p>毫无疑问的确如此。Cached Composition，也就是BitmapCache，通过缓存GPU贴图的图像来工作。这意味着你的CPU不用重新对图像进行曲面细分，GPU也不用重新栅格化。在一次渲染当中，WPF通过使用显存中的贴图来进行渲染以提高性能。下图是一个圆形的BitmapCache:</p>
+<p><img src="https://jeremiahmorrill.files.wordpress.com/2011/02/clip_image008_thumb.png?w=244&amp;h=247" alt=""></p>
+<p>WPF在这方面也是存在缺陷的。对于每一个它遇到的BitmapCache，它发起一次绘制调用。公平来讲，有时候在某些情况下为了渲染图像你必须发起一次渲染调用。这是自然而然的。但是我们举一个例子：在一个Canvas里面填充300个BitmapCache圆形。一个高级系统会知道它有300个依层次排列的圆形。然后向DX9一次处理16个采样输入那样，尽量多地批量处理这些圆形。在这个例子中，可以将300次绘制调用降低到19次并节省可观的CPU负载。在60FPS的情况下，我们可以将每秒18000次的绘制调用较低到1125次。在Direct3D 10中，一次能够处理的采样输出（sampler input）还要高得多。</p>
+<h2 id="好的，我读到这里了，告诉我-WPF-是怎样处理像素着色器的！"><a href="#好的，我读到这里了，告诉我-WPF-是怎样处理像素着色器的！" class="headerlink" title="好的，我读到这里了，告诉我 WPF 是怎样处理像素着色器的！"></a><strong>好的，我读到这里了，告诉我 WPF 是怎样处理像素着色器的！</strong></h2><p>WPF 有一个可扩展的像素着色器API，一起的还有一些内置的效果。这允许程序员为他们的UI添加一些非常特别的效果。在Direct3D中，当你要为一个贴图添加着色器，典型的做法是使用intermediate rendertarget…毕竟，你不能对你正在写入数据的贴图进行采样。WPF 也是这样的，但不幸的是，它每次都会为每一帧生成一个新的贴图并且在完成后将贴图销毁。在每帧中，生成和销毁GPU资源是其中一件你能做的最慢的事情之一。如果这些中间的资源能够被重复利用，在使用着色器时将可能有一个可观的性能提升。如果你曾因为在使用这些硬件加速驱动的着色器而导致明显的CPU占用问题而搞到困扰时，这就是原因。</p>
+<h2 id="或许这才是矢量图形在GPU渲染的方式"><a href="#或许这才是矢量图形在GPU渲染的方式" class="headerlink" title="或许这才是矢量图形在GPU渲染的方式!"></a><strong>或许这才是矢量图形在GPU渲染的方式!</strong></h2><p>微软花费了大量的努力来解决这些问题，不幸的是这并不是针对WPF。答案是Direct2D。考虑这组在Direct2D中渲染的9个描边的圆形：</p>
+<p><img src="https://jeremiahmorrill.files.wordpress.com/2011/02/clip_image009_thumb.png?w=292&amp;h=293" alt=""></p>
+<p>还记得WPF渲染一个描边的圆形需要多少次绘制调用吗？以及多少顶点缓存区被锁定？Direct2D只需要1次绘制调用。这是曲面细分看起来的样子：</p>
+<p><img src="https://jeremiahmorrill.files.wordpress.com/2011/02/clip_image010_thumb.png?w=402&amp;h=659" alt=""></p>
+<p>Direct2D尝试在一次中尽量绘制多地内容，最大化GPU使用并且最小化不必要的CPU负载。在这篇文章<a href="https://msdn.microsoft.com/en-us/magazine/dd861344.aspx" target="_blank" rel="external">“Insights: Direct2D Rendering”</a>底部，Mark Lawrence，使用大量细节解释了Direct2D的工作方式。你深入了解会发现，即使Direct2D运行的非常快，在很多方面它都可以在第二版本中进行改进。相信Direct2D的第二版会支持DX11的硬件曲面细分技术想必也不是那么不合逻辑。</p>
+<p>查阅Direct2D的API，说其中很多代码就是从WPF里面拿的，也不是什么疯狂的想法。如果你看这个老<a href="http://channel9.msdn.com/Blogs/Charles/Michael-Wallent-Advent-and-Evolution-of-WPF" target="_blank" rel="external">视频</a>,Micheal Wallent确实说过从这项技术上去创造一个原生的GDI技术作为替代。它有相似的几何图形API和命名。内部也坐着很多相同的事情，但是却更加优化和现代。</p>
+<h2 id="那Silverlight呢？"><a href="#那Silverlight呢？" class="headerlink" title="那Silverlight呢？"></a><strong>那Silverlight呢？</strong></h2><p>我会深入讲Silverlight，但可能有点多余。Silverlight的渲染性能是低效的，但是因为另外的方式。它在CPU上进行栅格化（即使是着色器，如果我没记错的话，是使用汇编语言写的），但是CPU起码比GPU慢10-30倍。这导致你只有相当少的能力渲染UI，甚至更少的能力给到程序逻辑。它的硬件加速是非常基础的，并且几乎和WPF的Cache Composition一样，对于每个BitmapCached图像都要调用一次绘制调用。</p>
+<h2 id="我们能怎样做？"><a href="#我们能怎样做？" class="headerlink" title="我们能怎样做？"></a><strong>我们能怎样做？</strong></h2><p>这是一个我的客户在使用WPF或者Silverlight遇到性能问题时提到的共同问题。不幸的是，我也没有一个答复给到他们。有些可以为了他们特定的需求使用自己的框架。其他的，我尽量倾听，但是他们必须忍受它，毕竟并没有其他丰富的选择来替代WPF和Silverlight。</p>
+
+        
+        </div>
+        <footer class="article-footer">
+            <div class="share-container">
+
+
+    <div class="bdsharebuttonbox">
+    <a href="#" class="bds_more" data-cmd="more">分享到：</a>
+    <a href="#" class="bds_weixin" data-cmd="weixin" title="分享到微信">微信</a>    
+    <a href="#" class="bds_sqq" data-cmd="qzone" title="分享给QQ好友">QQ</a>
+    <a href="#" class="bds_tsina" data-cmd="tsina" title="分享到新浪微博">新浪微博</a>
+</div>
+<script>
+window._bd_share_config={"common":{"bdSnsKey":{},"bdText":"","bdMini":"2","bdMiniList":false,"bdPic":"","bdStyle":"0","bdSize":"16"},"share":{"bdSize":16}};with(document)0[(getElementsByTagName('head')[0]||body).appendChild(createElement('script')).src='http://bdimg.share.baidu.com/static/api/js/share.js?v=89860593.js?cdnversion='+~(-new Date()/36e5)];
+</script>
+<style>
+    .bdshare_popup_box {
+        border-radius: 4px;
+        border: #e1e1e1 solid 1px;
+    }
+    .bdshare-button-style0-16 a,
+    .bdshare-button-style0-16 .bds_more {
+        padding-left: 20px;
+        margin: 6px 10px 6px 0;
+    }
+    .bdshare_dialog_list a,
+    .bdshare_popup_list a,
+    .bdshare_popup_bottom a {
+        font-family: 'Microsoft Yahei';
+    }
+    .bdshare_popup_top {
+        display: none;
+    }
+    .bdshare_popup_bottom {
+        height: auto;
+        padding: 5px;
+    }
+</style>
+
+
+</div>
+
+            
+    
+
+        </footer>
+    </div>
+    
+        
+<nav id="article-nav">
+    
+        <a href="/2017/03/07/Timelapse/" id="article-nav-newer" class="article-nav-link-wrap">
+            <strong class="article-nav-caption">上一篇</strong>
+            <div class="article-nav-title">
+                
+                    Timelapse
+                
+            </div>
+        </a>
+    
+    
+</nav>
+
+
+    
+</article>
+
+
+    
+    <section id="comments">
+    
+    </section>
+
+</section>
+            
+                <aside id="sidebar">
+   
+        
+    <div class="widget-wrap">
+        <h3 class="widget-title">最新文章</h3>
+        <div class="widget">
+            <ul id="recent-post" class="">
+                
+                    <li>
+                        
+                        <div class="item-thumbnail">
+                            <a href="/2018/08/23/tail-recursion/" class="thumbnail">
+    
+    
+        <span class="thumbnail-image thumbnail-none"></span>
+    
+</a>
+
+                        </div>
+                        
+                        <div class="item-inner">
+                            <!-- <p class="item-category"><a class="article-category-link" href="/categories/技术/">技术</a></p> -->
+                            <p class="item-title"><a href="/2018/08/23/tail-recursion/" class="title">C# 尾递归优化</a></p>
+                            <p class="item-date"><time datetime="2018-08-22T16:41:31.000Z" itemprop="datePublished">2018-08-23</time></p>
+                        </div>
+                    </li>
+                
+                    <li>
+                        
+                        <div class="item-thumbnail">
+                            <a href="/2018/07/16/filtering-in-business-logic/" class="thumbnail">
+    
+    
+        <span class="thumbnail-image thumbnail-none"></span>
+    
+</a>
+
+                        </div>
+                        
+                        <div class="item-inner">
+                            <!-- <p class="item-category"></p> -->
+                            <p class="item-title"><a href="/2018/07/16/filtering-in-business-logic/" class="title">业务逻辑中的 Filter</a></p>
+                            <p class="item-date"><time datetime="2018-07-16T03:50:00.000Z" itemprop="datePublished">2018-07-16</time></p>
+                        </div>
+                    </li>
+                
+                    <li>
+                        
+                        <div class="item-thumbnail">
+                            <a href="/2018/07/10/workdesks-of-mine/" class="thumbnail">
+    
+    
+        <span class="thumbnail-image thumbnail-none"></span>
+    
+</a>
+
+                        </div>
+                        
+                        <div class="item-inner">
+                            <!-- <p class="item-category"></p> -->
+                            <p class="item-title"><a href="/2018/07/10/workdesks-of-mine/" class="title">工作台</a></p>
+                            <p class="item-date"><time datetime="2018-07-09T16:25:36.000Z" itemprop="datePublished">2018-07-10</time></p>
+                        </div>
+                    </li>
+                
+                    <li>
+                        
+                        <div class="item-thumbnail">
+                            <a href="/2018/06/01/debugging-mlt/" class="thumbnail">
+    
+    
+        <span style="background-image:url(https://www.mltframework.org/assets/img/mlt-logo-128.png)" alt="使用 IDE 编译调试 Mlt framework" class="thumbnail-image"></span>
+    
+</a>
+
+                        </div>
+                        
+                        <div class="item-inner">
+                            <!-- <p class="item-category"></p> -->
+                            <p class="item-title"><a href="/2018/06/01/debugging-mlt/" class="title">使用 IDE 编译调试 Mlt framework</a></p>
+                            <p class="item-date"><time datetime="2018-06-01T05:32:41.000Z" itemprop="datePublished">2018-06-01</time></p>
+                        </div>
+                    </li>
+                
+                    <li>
+                        
+                        <div class="item-thumbnail">
+                            <a href="/2018/04/17/debug_mlt_vscode/" class="thumbnail">
+    
+    
+        <span style="background-image:url(https://www.mltframework.org/assets/img/mlt-logo-128.png)" alt="Debug Mlt Framework in VSCode" class="thumbnail-image"></span>
+    
+</a>
+
+                        </div>
+                        
+                        <div class="item-inner">
+                            <!-- <p class="item-category"><a class="article-category-link" href="/categories/图片/">图片</a></p> -->
+                            <p class="item-title"><a href="/2018/04/17/debug_mlt_vscode/" class="title">Debug Mlt Framework in VSCode</a></p>
+                            <p class="item-date"><time datetime="2018-04-16T17:21:38.000Z" itemprop="datePublished">2018-04-17</time></p>
+                        </div>
+                    </li>
+                
+            </ul>
+        </div>
+    </div>
+
+    
+        
+    <div class="widget-wrap">
+        <h3 class="widget-title">分类</h3>
+        <div class="widget">
+            <ul class="category-list"><li class="category-list-item"><a class="category-list-link" href="/categories/图片/">图片</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/工具/">工具</a><span class="category-list-count">2</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/技术/">技术</a><span class="category-list-count">12</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/摄影/">摄影</a><span class="category-list-count">2</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/翻译/">翻译</a><span class="category-list-count">3</span></li></ul>
+        </div>
+    </div>
+
+    
+        
+    <div class="widget-wrap">
+        <h3 class="widget-title">归档</h3>
+        <div class="widget">
+            <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/08/">八月 2018</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/07/">七月 2018</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/06/">六月 2018</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/04/">四月 2018</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/03/">三月 2018</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/02/">二月 2018</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/01/">一月 2018</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/12/">十二月 2017</a><span class="archive-list-count">3</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/10/">十月 2017</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/09/">九月 2017</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/08/">八月 2017</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/06/">六月 2017</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/05/">五月 2017</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/03/">三月 2017</a><span class="archive-list-count">4</span></li></ul>
+        </div>
+    </div>
+
+    
+        
+    <div class="widget-wrap">
+        <h3 class="widget-title">标签</h3>
+        <div class="widget">
+            <ul class="tag-list"><li class="tag-list-item"><a class="tag-list-link" href="/tags/2K/">2K</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/BUG/">BUG</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/CLOO/">CLOO</a><span class="tag-list-count">2</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/D3DImage/">D3DImage</a><span class="tag-list-count">2</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/DirectX/">DirectX</a><span class="tag-list-count">4</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Extension/">Extension</a><span class="tag-list-count">2</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/FFmpeg/">FFmpeg</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/GPU/">GPU</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Guangzhou/">Guangzhou</a><span class="tag-list-count">2</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/LayeredWindow/">LayeredWindow</a><span class="tag-list-count">2</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Mlt-Framework/">Mlt Framework</a><span class="tag-list-count">2</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/NET-Standard/">NET Standard</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Nikon/">Nikon</a><span class="tag-list-count">2</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/OpenCL/">OpenCL</a><span class="tag-list-count">4</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Perforator/">Perforator</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Performance/">Performance</a><span class="tag-list-count">2</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Profiling/">Profiling</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Timelapse/">Timelapse</a><span class="tag-list-count">2</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/VSCode/">VSCode</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Video/">Video</a><span class="tag-list-count">2</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Visual-Studio/">Visual Studio</a><span class="tag-list-count">3</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/WPF/">WPF</a><span class="tag-list-count">7</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Xcode/">Xcode</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/async-await/">async/await</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/design-pattern/">design pattern</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/filter/">filter</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/单反/">单反</a><span class="tag-list-count">2</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/图像处理/">图像处理</a><span class="tag-list-count">2</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/尾递归/">尾递归</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/曼德博集合/">曼德博集合</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/渲染/">渲染</a><span class="tag-list-count">2</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/翻译/">翻译</a><span class="tag-list-count">3</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/解码/">解码</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/通用计算/">通用计算</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/音视频/">音视频</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/高性能计算/">高性能计算</a><span class="tag-list-count">3</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/高斯模糊/">高斯模糊</a><span class="tag-list-count">1</span></li></ul>
+        </div>
+    </div>
+
+    
+        
+    <div class="widget-wrap">
+        <h3 class="widget-title">标签云</h3>
+        <div class="widget tagcloud">
+            <a href="/tags/2K/" style="font-size: 10px;">2K</a> <a href="/tags/BUG/" style="font-size: 10px;">BUG</a> <a href="/tags/CLOO/" style="font-size: 12.5px;">CLOO</a> <a href="/tags/D3DImage/" style="font-size: 12.5px;">D3DImage</a> <a href="/tags/DirectX/" style="font-size: 17.5px;">DirectX</a> <a href="/tags/Extension/" style="font-size: 12.5px;">Extension</a> <a href="/tags/FFmpeg/" style="font-size: 10px;">FFmpeg</a> <a href="/tags/GPU/" style="font-size: 10px;">GPU</a> <a href="/tags/Guangzhou/" style="font-size: 12.5px;">Guangzhou</a> <a href="/tags/LayeredWindow/" style="font-size: 12.5px;">LayeredWindow</a> <a href="/tags/Mlt-Framework/" style="font-size: 12.5px;">Mlt Framework</a> <a href="/tags/NET-Standard/" style="font-size: 10px;">NET Standard</a> <a href="/tags/Nikon/" style="font-size: 12.5px;">Nikon</a> <a href="/tags/OpenCL/" style="font-size: 17.5px;">OpenCL</a> <a href="/tags/Perforator/" style="font-size: 10px;">Perforator</a> <a href="/tags/Performance/" style="font-size: 12.5px;">Performance</a> <a href="/tags/Profiling/" style="font-size: 10px;">Profiling</a> <a href="/tags/Timelapse/" style="font-size: 12.5px;">Timelapse</a> <a href="/tags/VSCode/" style="font-size: 10px;">VSCode</a> <a href="/tags/Video/" style="font-size: 12.5px;">Video</a> <a href="/tags/Visual-Studio/" style="font-size: 15px;">Visual Studio</a> <a href="/tags/WPF/" style="font-size: 20px;">WPF</a> <a href="/tags/Xcode/" style="font-size: 10px;">Xcode</a> <a href="/tags/async-await/" style="font-size: 10px;">async/await</a> <a href="/tags/design-pattern/" style="font-size: 10px;">design pattern</a> <a href="/tags/filter/" style="font-size: 10px;">filter</a> <a href="/tags/单反/" style="font-size: 12.5px;">单反</a> <a href="/tags/图像处理/" style="font-size: 12.5px;">图像处理</a> <a href="/tags/尾递归/" style="font-size: 10px;">尾递归</a> <a href="/tags/曼德博集合/" style="font-size: 10px;">曼德博集合</a> <a href="/tags/渲染/" style="font-size: 12.5px;">渲染</a> <a href="/tags/翻译/" style="font-size: 15px;">翻译</a> <a href="/tags/解码/" style="font-size: 10px;">解码</a> <a href="/tags/通用计算/" style="font-size: 10px;">通用计算</a> <a href="/tags/音视频/" style="font-size: 10px;">音视频</a> <a href="/tags/高性能计算/" style="font-size: 15px;">高性能计算</a> <a href="/tags/高斯模糊/" style="font-size: 10px;">高斯模糊</a>
+        </div>
+    </div>
+
+    
+        
+    <div class="widget-wrap widget-list">
+        <h3 class="widget-title">链接</h3>
+        <div class="widget">
+            <ul>
+                
+                    <li>
+                        <a href="http://hexo.io">Hexo</a>
+                    </li>
+                
+                    <li>
+                        <a href="http://lindexi.oschina.io/">林德熙的博客</a>
+                    </li>
+                
+                    <li>
+                        <a href="https://walterlv.github.io/blog/">吕毅的博客</a>
+                    </li>
+                
+            </ul>
+        </div>
+    </div>
+
+
+    
+    <div id="toTop" class="fa fa-angle-up"></div>
+</aside>
+            
+        </div>
+        <footer id="footer">
+    <div class="outer">
+        <div id="footer-info" class="inner">
+            &copy; 2018 gandalfliang<br>
+            Powered by <a href="http://hexo.io/" target="_blank">Hexo</a>. Theme by <a href="http://github.com/ppoffice">PPOffice</a>
+        </div>
+    </div>
+</footer>
+        
+
+    
+        <script src="/libs/lightgallery/js/lightgallery.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-thumbnail.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-pager.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-autoplay.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-fullscreen.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-zoom.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-hash.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-share.min.js"></script>
+        <script src="/libs/lightgallery/js/lg-video.min.js"></script>
+    
+    
+        <script src="/libs/justified-gallery/jquery.justifiedGallery.min.js"></script>
+    
+
+
+
+<!-- Custom Scripts -->
+<script src="/js/main.js"></script>
+
+    </div>
+</body>
+</html>
