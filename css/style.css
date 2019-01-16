@@ -951,18 +951,9 @@ a.article-title:hover {
   font-size: 1.1em;
   margin: 0 -20px;
   padding: 10px 20px 10px 54px;
-  background: #fcfcfc;
-  border-left: 4px solid #eee;
-}
-.article-entry blockquote:before {
-  top: 20px;
-  left: 10px;
-  content: "\f10d";
-  color: #e2e2e2;
-  font-size: 32px;
-  font-family: FontAwesome;
-  text-align: center;
-  position: static;
+  background: rgba(255,215,117,0.459);
+  border-left: 8px solid rgba(255,168,0,0.522);
+  color: rgba(53,10,12,0.651);
 }
 .article-entry blockquote footer {
   font-size: 14px;
@@ -1015,8 +1006,8 @@ a.article-title:hover {
   line-height: 1em;
   padding: 6px 15px;
   border-radius: 15px;
-  background: #f5f8f9;
-  color: #999;
+  background: #d0d0d0;
+  color: #1d1d1d;
   text-shadow: 0 1px #fff;
   text-decoration: none;
 }
