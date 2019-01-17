@@ -151,11 +151,11 @@
         </div>
         <div class="article-info profile-block">
             <div class="article-info-block">
-                23
+                24
                 <span>文章</span>
             </div>
             <div class="article-info-block">
-                41
+                43
                 <span>标签</span>
             </div>
         </div>
@@ -186,6 +186,118 @@
 
             
             <section id="main">
+    <article id="post-transparent_4k_window" class="article article-type-post" itemscope itemprop="blogPost">
+    <div class="article-inner">
+        
+        
+            <header class="article-header">
+                
+    
+        <h1 itemprop="name">
+            <a class="article-title" href="/2018/01/17/transparent_4k_window/">关于 WPF 透明窗口的内存占用</a>
+        </h1>
+    
+
+                
+                    <div class="article-meta">
+                        
+    <div class="article-date">
+        <i class="fa fa-calendar"></i>
+        <a href="/2018/01/17/transparent_4k_window/">
+            <time datetime="2018-01-17T03:01:38.000Z" itemprop="datePublished">2018-01-17</time>
+        </a>
+    </div>
+
+
+                        
+    <div class="article-category">
+    	<i class="fa fa-folder"></i>
+        <a class="article-category-link" href="/categories/技术/">技术</a>
+    </div>
+
+                        
+    <div class="article-tag">
+        <i class="fa fa-tag"></i>
+        <a class="tag-link" href="/tags/LayeredWindow/">LayeredWindow</a>, <a class="tag-link" href="/tags/Performance/">Performance</a>, <a class="tag-link" href="/tags/WPF/">WPF</a>
+    </div>
+
+                    </div>
+                
+            </header>
+        
+        
+        <div class="article-entry" itemprop="articleBody">
+        
+            
+            <p>要实现一个透明的 WPF 窗口？<br>What an easy task! By setting AllowTransparency and WindowStyle, you could finish it in seconds.   </p>
+<p><code>AllowTransparency=&quot;True&quot; WindowStyle=&quot;None&quot; Background=&quot;Transparent&quot;</code>   </p>
+<p>Correct? Of course.  </p>
+<p>However (you know this is coming), look at your task manager, easy task comes with large memory consumption, especially for 4K transparent window. 100+ MB ram are wasted for just showing an empty, transparent window! That’s unacceptable. A year ago, you might be right saying “Who cares about RAM, they are cheap as hell”, but check out the price they’ve grown over this year, they are expensive as hell now.  </p>
+<h2 id="Fun-fact-of-WPF-transparent-window"><a href="#Fun-fact-of-WPF-transparent-window" class="headerlink" title="Fun fact of WPF transparent window"></a>Fun fact of WPF transparent window</h2><ul>
+<li><code>RAM usage increase as window size enlarge</code>  </li>
+<li><code>Win32 window has no such problem</code>  </li>
+</ul>
+<p>Wait, what? The larger the window is, the more RAM it consumes? Hmmmmm… this looks familiar, just like a <code>Bitmap</code>. For now, we don’t know how WPF handles transparent window, but the symptom shows that it’s like using the whole screen as a bitmap and the window updating itself with portion of that bitmap, making it “transparent”. What a smart move…<br>Back in the days when WPF was first released, low screen resolution was the main stream. Even today, most laptops still are shipping with a monitor of 1366*768 (ridiculous, right?). Let’s despise the nonsense the OEM told us and think about program running in computers with higher screen resolution. </p>
+<h2 id="RAM-is-not-free-do-not-waste-it"><a href="#RAM-is-not-free-do-not-waste-it" class="headerlink" title="RAM is not free, do not waste it"></a>RAM is not free, do not waste it</h2><p>Obviously, costing 100+ mb of ram for showing a transparent window in 4K is unacceptable, especially compared with Win32 transparent window, which costs only 10+ mb. The gap between them makes WPF look dump.<br>Enough complaining, what can we do about it? I don’t want to write UI code with GDI using C++, that’s inefficient and not modern, plus, no one would abandon their beautiful, easy to maintain xaml UI code for this.</p>
+<h2 id="Hosting-WPF-content-in-Win32-Window"><a href="#Hosting-WPF-content-in-Win32-Window" class="headerlink" title="Hosting WPF content in Win32 Window"></a>Hosting WPF content in Win32 Window</h2><p>Well, indeed, no one would rewrite their UI code for just about 90mb of RAM. Compared with the work needed to rewrite C++ UI code, the RAM consumption gap seems acceptable (#smile face). But please remember, we can always host WPF content in win32 window.<br>Let say, we want to create a full screen notification dialog with semi-transparent background and apaque notication content in the center. To avoid the WPF ram problem, we create a semi-transparent window using win32:<br><figure class="highlight javascript"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div></pre></td><td class="code"><pre><div class="line">DWORD Flags1 = WS_EX_LAYERED;</div><div class="line">DWORD Flags2 = WS_POPUP;</div><div class="line"></div><div class="line">HWND hWnd = CreateWindowEx(Flags1,szWindowClass, szTitle, Flags2,</div><div class="line">    CW_USEDEFAULT, <span class="number">0</span>, <span class="number">3840</span>,<span class="number">2160</span>, nullptr, nullptr, hInstance, nullptr);</div><div class="line"></div><div class="line">SetLayeredWindowAttributes(hWnd, RRR, (BYTE)<span class="number">125</span>, LWA_ALPHA);</div><div class="line">ShowWindow(hWnd, nCmdShow);</div><div class="line">UpdateWindow(hWnd);</div><div class="line"></div><div class="line"><span class="keyword">case</span> WM_ERASEBKGND:</div><div class="line">    RECT rect;</div><div class="line">    GetClientRect(hWnd, &amp;rect);</div><div class="line">    FillRect((HDC)wParam, &amp;rect, CreateSolidBrush(RGB(<span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>)));</div><div class="line">    <span class="keyword">break</span>;</div></pre></td></tr></table></figure></p>
+<p>By enabling <code>C++/CLI</code>, we can access WPF content directly  </p>
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div></pre></td><td class="code"><pre><div class="line">namespace ManagedCode</div><div class="line">&#123;</div><div class="line">    using namespace System;</div><div class="line">    using namespace System::Windows;</div><div class="line">    using namespace System::Windows::Interop;</div><div class="line">    using namespace System::Windows::Media;</div><div class="line"></div><div class="line">    HWND GetHwnd(HWND parent, int x, int y, int width, int height) &#123;</div><div class="line">    HwndSource^ source = gcnew HwndSource(</div><div class="line">        <span class="number">0</span>, <span class="comment">// class style  </span></div><div class="line">        WS_VISIBLE | WS_CHILD, <span class="comment">// style  </span></div><div class="line">        <span class="number">0</span>, <span class="comment">// exstyle  </span></div><div class="line">        x, y, width, height,</div><div class="line">        <span class="string">"hi"</span>, <span class="comment">// NAME  </span></div><div class="line">        IntPtr(parent)        <span class="comment">// parent window   </span></div><div class="line">    );</div><div class="line"></div><div class="line">    UIElement^ page = gcnew ManagedContent::WPFContent();</div><div class="line">    source-&gt;RootVisual = page;</div><div class="line">    <span class="keyword">return</span> (HWND)source-&gt;Handle.ToPointer();</div><div class="line">    &#125;</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<p>and finally  </p>
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line"><span class="comment">//managed content</span></div><div class="line">ManagedCode::GetHwnd(hWnd, <span class="number">0</span>, <span class="number">0</span>, <span class="number">200</span>, <span class="number">200</span>);</div></pre></td></tr></table></figure>
+<p>Due to the different technologies behind WPF and GDI, more work needed to be done for the unavoidable alpha blending problem, but, you can use wpf popup to achieve your goal for short. </p>
+
+        
+        </div>
+        <footer class="article-footer">
+            <div class="share-container">
+
+
+    <div class="bdsharebuttonbox">
+    <a href="#" class="bds_more" data-cmd="more">分享到：</a>
+    <a href="#" class="bds_weixin" data-cmd="weixin" title="分享到微信">微信</a>    
+    <a href="#" class="bds_sqq" data-cmd="qzone" title="分享给QQ好友">QQ</a>
+    <a href="#" class="bds_tsina" data-cmd="tsina" title="分享到新浪微博">新浪微博</a>
+</div>
+<script>
+window._bd_share_config={"common":{"bdSnsKey":{},"bdText":"","bdMini":"2","bdMiniList":false,"bdPic":"","bdStyle":"0","bdSize":"16"},"share":{"bdSize":16}};with(document)0[(getElementsByTagName('head')[0]||body).appendChild(createElement('script')).src='http://bdimg.share.baidu.com/static/api/js/share.js?v=89860593.js?cdnversion='+~(-new Date()/36e5)];
+</script>
+<style>
+    .bdshare_popup_box {
+        border-radius: 4px;
+        border: #e1e1e1 solid 1px;
+    }
+    .bdshare-button-style0-16 a,
+    .bdshare-button-style0-16 .bds_more {
+        padding-left: 20px;
+        margin: 6px 10px 6px 0;
+    }
+    .bdshare_dialog_list a,
+    .bdshare_popup_list a,
+    .bdshare_popup_bottom a {
+        font-family: 'Microsoft Yahei';
+    }
+    .bdshare_popup_top {
+        display: none;
+    }
+    .bdshare_popup_bottom {
+        height: auto;
+        padding: 5px;
+    }
+</style>
+
+
+</div>
+
+            
+    
+
+        </footer>
+    </div>
+    
+</article>
+
+
+
     <article id="post-gaussian_blur_opencl" class="article article-type-post" itemscope itemprop="blogPost">
     <div class="article-inner">
         
@@ -1167,118 +1279,6 @@ window._bd_share_config={"common":{"bdSnsKey":{},"bdText":"","bdMini":"2","bdMin
 
 
 
-    <article id="post-ThereIsNoThread" class="article article-type-post" itemscope itemprop="blogPost">
-    <div class="article-inner">
-        
-        
-            <header class="article-header">
-                
-    
-        <h1 itemprop="name">
-            <a class="article-title" href="/2017/05/02/ThereIsNoThread/">【翻译】There Is No Thread</a>
-        </h1>
-    
-
-                
-                    <div class="article-meta">
-                        
-    <div class="article-date">
-        <i class="fa fa-calendar"></i>
-        <a href="/2017/05/02/ThereIsNoThread/">
-            <time datetime="2017-05-02T10:14:58.000Z" itemprop="datePublished">2017-05-02</time>
-        </a>
-    </div>
-
-
-                        
-    <div class="article-category">
-    	<i class="fa fa-folder"></i>
-        <a class="article-category-link" href="/categories/翻译/">翻译</a>
-    </div>
-
-                        
-    <div class="article-tag">
-        <i class="fa fa-tag"></i>
-        <a class="tag-link" href="/tags/async-await/">async/await</a>, <a class="tag-link" href="/tags/翻译/">翻译</a>
-    </div>
-
-                    </div>
-                
-            </header>
-        
-        
-        <div class="article-entry" itemprop="articleBody">
-        
-            
-            <h2 id="这里并没有线程"><a href="#这里并没有线程" class="headerlink" title="这里并没有线程"></a>这里并没有线程</h2><p>原文地址： <a href="http://blog.stephencleary.com/2013/11/there-is-no-thread.html" target="_blank" rel="external">http://blog.stephencleary.com/2013/11/there-is-no-thread.html</a></p>
-<hr>
-<p>最纯粹的async形式中存在一个重要的真相：这里并没有线程（或者不存在新建的线程）<br>举不胜数的反对者哭喊道：“不！如果我正在等待一个操作，那一定存在一个线程在等待这个操作！它可能是一个线程池中的线程。或者是系统线程！或者是其他类似设备驱动的东西…”。</p>
-<p>不要听从那些哭喊的人。如果那些async操作是纯粹的，那么这里将不会存在线程。</p>
-<p>那些持怀疑态度的人并没有被说服。让我们来娱乐一下他们。</p>
-<p>我们可以一路跟踪一条异步操作指令到硬件层面，特别留意其中的.Net部分和设备驱动部分。为了简化这部分描述，我们排除掉部分中间层的细节，但是这应该不会让我们偏离真相。</p>
-<p>思考一个通用的“写”操作（写一个文件、网络流、USB等等）。我们的代码很简单：</p>
-<figure class="highlight javascript"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div></pre></td><td class="code"><pre><div class="line">private <span class="keyword">async</span> <span class="keyword">void</span> Button_Clicked(object sender, RoutedEventArgs e)</div><div class="line">&#123;</div><div class="line">    byte[] data = ...</div><div class="line">    await myDevice.WriteAsync(data, <span class="number">0</span>, data.Length);</div><div class="line">&#125;</div></pre></td></tr></table></figure>
-<p>我们早就知道，UI线程并不会被await操作阻塞。那么问题来了：这里是不是存在另外一个线程，它牺牲自己所以UI线程才能存活？  </p>
-<p>抓住我的手，我们要潜的更深一点。</p>
-<p>第一站：类库（例如，查看BCL代码）。我们假设 WriteAsync 是用 .Net 标准的 P/Invoke 异步 I/O 操作实现的。所以，这个操作在设备的句柄上开始了一个Win32的重叠I/O操作。</p>
-<p>系统紧接着转到设备驱动并让设备开始写操作。它首先构造一个表示写请求的对象，这被称为I/O Request Packet(IRP)。设备驱动获得这个IRP并向设备发起命令来写对应的数据。如果设备支持Direct Memory Access(DMA)，这个操作就像向设备寄存器中写入缓存地址一样简单。这是设备驱动能做的所有事情；它使得IRP进入“等待”并转回到系统。</p>
-<p><img src="http://blog.stephencleary.com/assets/Os1.png" alt=""></p>
-<p>事实的核心：当处理IRP时，设备驱动不允许堵塞。这意味着，如果IRP不能立即完成，那么它一定要异步执行。这对于同步API也一样成立。在设备驱动这一层，所有（重要的）请求都是异步的。<br>随着IRP进入“等待”状态，系统通过返回一个未完成的Task给刚才堵塞的async按钮点击事件，然后UI线程继续执行。<br>我们深入追踪到系统底层的写操作，直至物理设备。<br>现在，写操作正在执行，那有多少线程在处理它呢？  </p>
-<h3 id="一个都没有"><a href="#一个都没有" class="headerlink" title="一个都没有"></a>一个都没有</h3><p>这里并没有设备驱动线程，系统线程，BLC线程或者线程池线程在处理那个写操作。<strong>这里根本就没有线程</strong><br>现在，我们看一下对应的回复（Response)。<br>写请求开始片刻，设备完成了写操作，他通过中断（Interrupt)通知CPU。<br>设备驱动的Interrupt Service Routine(ISR)对这个中断做出反应。中断是CPU层的时间，它会临时从当前CPU所运行的线程中获得CPU的控制权。你可以认为ISR是在“借用”当前正在运行的线程，但是我更倾向于认为ISR在更底层中执行，底层到根本不存在线程这个概念的水平。或者说它在所有线程之下。<br>无论如何，ISR已经被妥当的进行了写操作，它做的所有事情就是告诉设备“谢谢你的中断请求”并且将一个Deferred Procedure Call(DPC)入队（queue)。<br>当CPU被中断“骚扰”完之后，它会转向它的DPC。DPC也是在一个不能直接用线程描述的底层水平。和ISR一样，DPC直接在CPU上执行，在线程系统之下。<br>DPC获取代表写操作的ISR并将其标志成“完成”。然而，那么“完成”状态只存在系统层；必须要通知到进程自己拥有的内存空间。所以系统会入队一个special-kernel-mode Asynchronous Procedure Call(APC)给拥有HANDLE的线程。<br>因为上述提到的类库/BLC使用的是标准P/Inovke Overlapped I/O 系统，它早就注册了I/O Completion Port(IOCP)的句柄，这个句柄是线程池的一部分。所以，一个I/O线程池线程被短暂的“借用”来执行APC,通过它来通知task已经完成。<br>现在task捕获了UI线程的上下文，它不直接从线程池线程中返回async方法，相反，它将async方法后续的执行加入到UI线程的上下文，当UI线程执行到这里的时候就会继续执行这部分代码。<br>所以，当请求发生时，我们可以看到这里并没有线程。当请求完成时，大量的线程被“借用”或者短暂暂存到它们那里。这些工作大约在一毫秒（运行在线程池的APC)或者低到一微秒（例如ISR)。但是这里并没有线程因为等待请求完毕而被堵塞。</p>
-<p><img src="http://blog.stephencleary.com/assets/Os2.png" alt=""></p>
-
-        
-        </div>
-        <footer class="article-footer">
-            <div class="share-container">
-
-
-    <div class="bdsharebuttonbox">
-    <a href="#" class="bds_more" data-cmd="more">分享到：</a>
-    <a href="#" class="bds_weixin" data-cmd="weixin" title="分享到微信">微信</a>    
-    <a href="#" class="bds_sqq" data-cmd="qzone" title="分享给QQ好友">QQ</a>
-    <a href="#" class="bds_tsina" data-cmd="tsina" title="分享到新浪微博">新浪微博</a>
-</div>
-<script>
-window._bd_share_config={"common":{"bdSnsKey":{},"bdText":"","bdMini":"2","bdMiniList":false,"bdPic":"","bdStyle":"0","bdSize":"16"},"share":{"bdSize":16}};with(document)0[(getElementsByTagName('head')[0]||body).appendChild(createElement('script')).src='http://bdimg.share.baidu.com/static/api/js/share.js?v=89860593.js?cdnversion='+~(-new Date()/36e5)];
-</script>
-<style>
-    .bdshare_popup_box {
-        border-radius: 4px;
-        border: #e1e1e1 solid 1px;
-    }
-    .bdshare-button-style0-16 a,
-    .bdshare-button-style0-16 .bds_more {
-        padding-left: 20px;
-        margin: 6px 10px 6px 0;
-    }
-    .bdshare_dialog_list a,
-    .bdshare_popup_list a,
-    .bdshare_popup_bottom a {
-        font-family: 'Microsoft Yahei';
-    }
-    .bdshare_popup_top {
-        display: none;
-    }
-    .bdshare_popup_bottom {
-        height: auto;
-        padding: 5px;
-    }
-</style>
-
-
-</div>
-
-            
-    
-
-        </footer>
-    </div>
-    
-</article>
-
-
-
     <nav id="page-nav">
         <a class="extend prev" rel="prev" href="/">&laquo; 上一页</a><a class="page-number" href="/">1</a><span class="page-number current">2</span><a class="page-number" href="/page/3/">3</a><a class="extend next" rel="next" href="/page/3/">下一页 &raquo;</a>
     </nav>
@@ -1295,17 +1295,36 @@ window._bd_share_config={"common":{"bdSnsKey":{},"bdText":"","bdMini":"2","bdMin
                     <li>
                         
                         <div class="item-thumbnail">
-                            <a href="/2019/01/15/loop-hoisting/" class="thumbnail">
+                            <a href="/2019/01/17/jit-loop-invariant-hoisting/" class="thumbnail">
     
     
-        <span class="thumbnail-image thumbnail-none"></span>
+        <span style="background-image:url(https://avatars2.githubusercontent.com/u/9141961?s=200&amp;v=4)" alt="JIT Loop Invariant Hoisting" class="thumbnail-image"></span>
     
 </a>
 
                         </div>
                         
                         <div class="item-inner">
-                            <!-- <p class="item-category"></p> -->
+                            <!-- <p class="item-category"><a class="article-category-link" href="/categories/技术/">技术</a></p> -->
+                            <p class="item-title"><a href="/2019/01/17/jit-loop-invariant-hoisting/" class="title">JIT Loop Invariant Hoisting</a></p>
+                            <p class="item-date"><time datetime="2019-01-17T11:06:38.000Z" itemprop="datePublished">2019-01-17</time></p>
+                        </div>
+                    </li>
+                
+                    <li>
+                        
+                        <div class="item-thumbnail">
+                            <a href="/2019/01/15/loop-hoisting/" class="thumbnail">
+    
+    
+        <span style="background-image:url(https://avatars2.githubusercontent.com/u/9141961?s=200&amp;v=4)" alt="Loop Hoisting" class="thumbnail-image"></span>
+    
+</a>
+
+                        </div>
+                        
+                        <div class="item-inner">
+                            <!-- <p class="item-category"><a class="article-category-link" href="/categories/技术/">技术</a></p> -->
                             <p class="item-title"><a href="/2019/01/15/loop-hoisting/" class="title">Loop Hoisting</a></p>
                             <p class="item-date"><time datetime="2019-01-14T17:52:23.000Z" itemprop="datePublished">2019-01-15</time></p>
                         </div>
@@ -1368,25 +1387,6 @@ window._bd_share_config={"common":{"bdSnsKey":{},"bdText":"","bdMini":"2","bdMin
                         </div>
                     </li>
                 
-                    <li>
-                        
-                        <div class="item-thumbnail">
-                            <a href="/2018/06/01/debugging-mlt/" class="thumbnail">
-    
-    
-        <span style="background-image:url(https://www.mltframework.org/assets/img/mlt-logo-128.png)" alt="使用 IDE 编译调试 Mlt framework" class="thumbnail-image"></span>
-    
-</a>
-
-                        </div>
-                        
-                        <div class="item-inner">
-                            <!-- <p class="item-category"></p> -->
-                            <p class="item-title"><a href="/2018/06/01/debugging-mlt/" class="title">使用 IDE 编译调试 Mlt framework</a></p>
-                            <p class="item-date"><time datetime="2018-06-01T05:32:41.000Z" itemprop="datePublished">2018-06-01</time></p>
-                        </div>
-                    </li>
-                
             </ul>
         </div>
     </div>
@@ -1396,7 +1396,7 @@ window._bd_share_config={"common":{"bdSnsKey":{},"bdText":"","bdMini":"2","bdMin
     <div class="widget-wrap">
         <h3 class="widget-title">分类</h3>
         <div class="widget">
-            <ul class="category-list"><li class="category-list-item"><a class="category-list-link" href="/categories/图片/">图片</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/工具/">工具</a><span class="category-list-count">2</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/技术/">技术</a><span class="category-list-count">13</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/摄影/">摄影</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/翻译/">翻译</a><span class="category-list-count">3</span></li></ul>
+            <ul class="category-list"><li class="category-list-item"><a class="category-list-link" href="/categories/图片/">图片</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/工具/">工具</a><span class="category-list-count">2</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/技术/">技术</a><span class="category-list-count">15</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/摄影/">摄影</a><span class="category-list-count">1</span></li><li class="category-list-item"><a class="category-list-link" href="/categories/翻译/">翻译</a><span class="category-list-count">3</span></li></ul>
         </div>
     </div>
 
@@ -1405,7 +1405,7 @@ window._bd_share_config={"common":{"bdSnsKey":{},"bdText":"","bdMini":"2","bdMin
     <div class="widget-wrap">
         <h3 class="widget-title">归档</h3>
         <div class="widget">
-            <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/01/">一月 2019</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/12/">十二月 2018</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/08/">八月 2018</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/07/">七月 2018</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/06/">六月 2018</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/04/">四月 2018</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/03/">三月 2018</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/02/">二月 2018</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/01/">一月 2018</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/12/">十二月 2017</a><span class="archive-list-count">3</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/10/">十月 2017</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/09/">九月 2017</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/08/">八月 2017</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/06/">六月 2017</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/05/">五月 2017</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/03/">三月 2017</a><span class="archive-list-count">3</span></li></ul>
+            <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/01/">一月 2019</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/12/">十二月 2018</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/08/">八月 2018</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/07/">七月 2018</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/06/">六月 2018</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/04/">四月 2018</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/03/">三月 2018</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/02/">二月 2018</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/01/">一月 2018</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/12/">十二月 2017</a><span class="archive-list-count">3</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/10/">十月 2017</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/09/">九月 2017</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/08/">八月 2017</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/06/">六月 2017</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/05/">五月 2017</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/03/">三月 2017</a><span class="archive-list-count">3</span></li></ul>
         </div>
     </div>
 
@@ -1414,7 +1414,7 @@ window._bd_share_config={"common":{"bdSnsKey":{},"bdText":"","bdMini":"2","bdMin
     <div class="widget-wrap">
         <h3 class="widget-title">标签</h3>
         <div class="widget">
-            <ul class="tag-list"><li class="tag-list-item"><a class="tag-list-link" href="/tags/BUG/">BUG</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/C/">C#</a><span class="tag-list-count">3</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/CLOO/">CLOO</a><span class="tag-list-count">2</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/D3DImage/">D3DImage</a><span class="tag-list-count">2</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/DirectX/">DirectX</a><span class="tag-list-count">4</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Extension/">Extension</a><span class="tag-list-count">2</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/FFmpeg/">FFmpeg</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/GPU/">GPU</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Guangzhou/">Guangzhou</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/LayeredWindow/">LayeredWindow</a><span class="tag-list-count">2</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Loop-Hoisting/">Loop Hoisting</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Mlt-Framework/">Mlt Framework</a><span class="tag-list-count">2</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/NET-Standard/">NET Standard</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Nikon/">Nikon</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/OpenCL/">OpenCL</a><span class="tag-list-count">4</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Perforator/">Perforator</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Performance/">Performance</a><span class="tag-list-count">2</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Profiling/">Profiling</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Timelapse/">Timelapse</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/VSCode/">VSCode</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Video/">Video</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Visual-Studio/">Visual Studio</a><span class="tag-list-count">3</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Volatile/">Volatile</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/WPF/">WPF</a><span class="tag-list-count">7</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Xcode/">Xcode</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/async-await/">async/await</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/design-pattern/">design pattern</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/filter/">filter</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/内存模型/">内存模型</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/单反/">单反</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/图像处理/">图像处理</a><span class="tag-list-count">2</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/尾递归/">尾递归</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/曼德博集合/">曼德博集合</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/渲染/">渲染</a><span class="tag-list-count">2</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/编译器优化/">编译器优化</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/翻译/">翻译</a><span class="tag-list-count">3</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/解码/">解码</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/通用计算/">通用计算</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/音视频/">音视频</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/高性能计算/">高性能计算</a><span class="tag-list-count">3</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/高斯模糊/">高斯模糊</a><span class="tag-list-count">1</span></li></ul>
+            <ul class="tag-list"><li class="tag-list-item"><a class="tag-list-link" href="/tags/BUG/">BUG</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/C/">C#</a><span class="tag-list-count">4</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/CLOO/">CLOO</a><span class="tag-list-count">2</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/D3DImage/">D3DImage</a><span class="tag-list-count">2</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/DirectX/">DirectX</a><span class="tag-list-count">4</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Extension/">Extension</a><span class="tag-list-count">2</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/FFmpeg/">FFmpeg</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/GPU/">GPU</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Guangzhou/">Guangzhou</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/LayeredWindow/">LayeredWindow</a><span class="tag-list-count">2</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Loop-Hoisting/">Loop Hoisting</a><span class="tag-list-count">2</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Loop-Invariant-Hoisting/">Loop Invariant Hoisting</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Mlt-Framework/">Mlt Framework</a><span class="tag-list-count">2</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/NET-Standard/">NET Standard</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Nikon/">Nikon</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/OpenCL/">OpenCL</a><span class="tag-list-count">4</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Perforator/">Perforator</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Performance/">Performance</a><span class="tag-list-count">2</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Profiling/">Profiling</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/RyuJIT/">RyuJIT</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Timelapse/">Timelapse</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/VSCode/">VSCode</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Video/">Video</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Visual-Studio/">Visual Studio</a><span class="tag-list-count">3</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Volatile/">Volatile</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/WPF/">WPF</a><span class="tag-list-count">7</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/Xcode/">Xcode</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/async-await/">async/await</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/design-pattern/">design pattern</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/filter/">filter</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/内存模型/">内存模型</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/单反/">单反</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/图像处理/">图像处理</a><span class="tag-list-count">2</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/尾递归/">尾递归</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/曼德博集合/">曼德博集合</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/渲染/">渲染</a><span class="tag-list-count">2</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/编译器优化/">编译器优化</a><span class="tag-list-count">2</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/翻译/">翻译</a><span class="tag-list-count">3</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/解码/">解码</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/通用计算/">通用计算</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/音视频/">音视频</a><span class="tag-list-count">1</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/高性能计算/">高性能计算</a><span class="tag-list-count">3</span></li><li class="tag-list-item"><a class="tag-list-link" href="/tags/高斯模糊/">高斯模糊</a><span class="tag-list-count">1</span></li></ul>
         </div>
     </div>
 
@@ -1423,7 +1423,7 @@ window._bd_share_config={"common":{"bdSnsKey":{},"bdText":"","bdMini":"2","bdMin
     <div class="widget-wrap">
         <h3 class="widget-title">标签云</h3>
         <div class="widget tagcloud">
-            <a href="/tags/BUG/" style="font-size: 10px;">BUG</a> <a href="/tags/C/" style="font-size: 15px;">C#</a> <a href="/tags/CLOO/" style="font-size: 12.5px;">CLOO</a> <a href="/tags/D3DImage/" style="font-size: 12.5px;">D3DImage</a> <a href="/tags/DirectX/" style="font-size: 17.5px;">DirectX</a> <a href="/tags/Extension/" style="font-size: 12.5px;">Extension</a> <a href="/tags/FFmpeg/" style="font-size: 10px;">FFmpeg</a> <a href="/tags/GPU/" style="font-size: 10px;">GPU</a> <a href="/tags/Guangzhou/" style="font-size: 10px;">Guangzhou</a> <a href="/tags/LayeredWindow/" style="font-size: 12.5px;">LayeredWindow</a> <a href="/tags/Loop-Hoisting/" style="font-size: 10px;">Loop Hoisting</a> <a href="/tags/Mlt-Framework/" style="font-size: 12.5px;">Mlt Framework</a> <a href="/tags/NET-Standard/" style="font-size: 10px;">NET Standard</a> <a href="/tags/Nikon/" style="font-size: 10px;">Nikon</a> <a href="/tags/OpenCL/" style="font-size: 17.5px;">OpenCL</a> <a href="/tags/Perforator/" style="font-size: 10px;">Perforator</a> <a href="/tags/Performance/" style="font-size: 12.5px;">Performance</a> <a href="/tags/Profiling/" style="font-size: 10px;">Profiling</a> <a href="/tags/Timelapse/" style="font-size: 10px;">Timelapse</a> <a href="/tags/VSCode/" style="font-size: 10px;">VSCode</a> <a href="/tags/Video/" style="font-size: 10px;">Video</a> <a href="/tags/Visual-Studio/" style="font-size: 15px;">Visual Studio</a> <a href="/tags/Volatile/" style="font-size: 10px;">Volatile</a> <a href="/tags/WPF/" style="font-size: 20px;">WPF</a> <a href="/tags/Xcode/" style="font-size: 10px;">Xcode</a> <a href="/tags/async-await/" style="font-size: 10px;">async/await</a> <a href="/tags/design-pattern/" style="font-size: 10px;">design pattern</a> <a href="/tags/filter/" style="font-size: 10px;">filter</a> <a href="/tags/内存模型/" style="font-size: 10px;">内存模型</a> <a href="/tags/单反/" style="font-size: 10px;">单反</a> <a href="/tags/图像处理/" style="font-size: 12.5px;">图像处理</a> <a href="/tags/尾递归/" style="font-size: 10px;">尾递归</a> <a href="/tags/曼德博集合/" style="font-size: 10px;">曼德博集合</a> <a href="/tags/渲染/" style="font-size: 12.5px;">渲染</a> <a href="/tags/编译器优化/" style="font-size: 10px;">编译器优化</a> <a href="/tags/翻译/" style="font-size: 15px;">翻译</a> <a href="/tags/解码/" style="font-size: 10px;">解码</a> <a href="/tags/通用计算/" style="font-size: 10px;">通用计算</a> <a href="/tags/音视频/" style="font-size: 10px;">音视频</a> <a href="/tags/高性能计算/" style="font-size: 15px;">高性能计算</a> <a href="/tags/高斯模糊/" style="font-size: 10px;">高斯模糊</a>
+            <a href="/tags/BUG/" style="font-size: 10px;">BUG</a> <a href="/tags/C/" style="font-size: 17.5px;">C#</a> <a href="/tags/CLOO/" style="font-size: 12.5px;">CLOO</a> <a href="/tags/D3DImage/" style="font-size: 12.5px;">D3DImage</a> <a href="/tags/DirectX/" style="font-size: 17.5px;">DirectX</a> <a href="/tags/Extension/" style="font-size: 12.5px;">Extension</a> <a href="/tags/FFmpeg/" style="font-size: 10px;">FFmpeg</a> <a href="/tags/GPU/" style="font-size: 10px;">GPU</a> <a href="/tags/Guangzhou/" style="font-size: 10px;">Guangzhou</a> <a href="/tags/LayeredWindow/" style="font-size: 12.5px;">LayeredWindow</a> <a href="/tags/Loop-Hoisting/" style="font-size: 12.5px;">Loop Hoisting</a> <a href="/tags/Loop-Invariant-Hoisting/" style="font-size: 10px;">Loop Invariant Hoisting</a> <a href="/tags/Mlt-Framework/" style="font-size: 12.5px;">Mlt Framework</a> <a href="/tags/NET-Standard/" style="font-size: 10px;">NET Standard</a> <a href="/tags/Nikon/" style="font-size: 10px;">Nikon</a> <a href="/tags/OpenCL/" style="font-size: 17.5px;">OpenCL</a> <a href="/tags/Perforator/" style="font-size: 10px;">Perforator</a> <a href="/tags/Performance/" style="font-size: 12.5px;">Performance</a> <a href="/tags/Profiling/" style="font-size: 10px;">Profiling</a> <a href="/tags/RyuJIT/" style="font-size: 10px;">RyuJIT</a> <a href="/tags/Timelapse/" style="font-size: 10px;">Timelapse</a> <a href="/tags/VSCode/" style="font-size: 10px;">VSCode</a> <a href="/tags/Video/" style="font-size: 10px;">Video</a> <a href="/tags/Visual-Studio/" style="font-size: 15px;">Visual Studio</a> <a href="/tags/Volatile/" style="font-size: 10px;">Volatile</a> <a href="/tags/WPF/" style="font-size: 20px;">WPF</a> <a href="/tags/Xcode/" style="font-size: 10px;">Xcode</a> <a href="/tags/async-await/" style="font-size: 10px;">async/await</a> <a href="/tags/design-pattern/" style="font-size: 10px;">design pattern</a> <a href="/tags/filter/" style="font-size: 10px;">filter</a> <a href="/tags/内存模型/" style="font-size: 10px;">内存模型</a> <a href="/tags/单反/" style="font-size: 10px;">单反</a> <a href="/tags/图像处理/" style="font-size: 12.5px;">图像处理</a> <a href="/tags/尾递归/" style="font-size: 10px;">尾递归</a> <a href="/tags/曼德博集合/" style="font-size: 10px;">曼德博集合</a> <a href="/tags/渲染/" style="font-size: 12.5px;">渲染</a> <a href="/tags/编译器优化/" style="font-size: 12.5px;">编译器优化</a> <a href="/tags/翻译/" style="font-size: 15px;">翻译</a> <a href="/tags/解码/" style="font-size: 10px;">解码</a> <a href="/tags/通用计算/" style="font-size: 10px;">通用计算</a> <a href="/tags/音视频/" style="font-size: 10px;">音视频</a> <a href="/tags/高性能计算/" style="font-size: 15px;">高性能计算</a> <a href="/tags/高斯模糊/" style="font-size: 10px;">高斯模糊</a>
         </div>
     </div>
 

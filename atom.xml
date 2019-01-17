@@ -6,7 +6,7 @@
   <link href="/atom.xml" rel="self"/>
   
   <link href="https://gandalfliang.github.io/"/>
-  <updated>2019-01-16T11:44:11.195Z</updated>
+  <updated>2019-01-17T11:18:04.577Z</updated>
   <id>https://gandalfliang.github.io/</id>
   
   <author>
@@ -17,11 +17,44 @@
   <generator uri="http://hexo.io/">Hexo</generator>
   
   <entry>
+    <title>JIT Loop Invariant Hoisting</title>
+    <link href="https://gandalfliang.github.io/2019/01/17/jit-loop-invariant-hoisting/"/>
+    <id>https://gandalfliang.github.io/2019/01/17/jit-loop-invariant-hoisting/</id>
+    <published>2019-01-17T11:06:38.000Z</published>
+    <updated>2019-01-17T11:18:04.577Z</updated>
+    
+    <content type="html"><![CDATA[<p>在上一篇<a href="./2019/01/15/loop-hoisting/">文章</a>中，我们已经对 <code>Loop Invariant</code> 概念有一个简单的了解，在文章的最后提到的 <code>Loop Invariant</code> 将在这篇文章做一个简单的介绍。</p><h2 id="在我们开始之前"><a href="#在我们开始之前" class="headerlink" title="在我们开始之前"></a>在我们开始之前</h2><p>如果你了解 <code>C#</code> 程序的运行，应该知道 <code>C#</code> 代码先被编译器编译为 <code>MSIL</code> 中间代码，在实际运行的时候才通过 <code>JIT</code> 编译器将 <code>MSIL</code> 代码编译成机器代码并运行。因此，编译器有两个时段可以对代码进行优化：</p><ul><li><strong>C#</strong> -&gt; <strong>MSIL</strong></li><li><strong>MSIL</strong> -&gt; <strong>MACHINE CODE</strong>  </li></ul><p>但是，C#到MSIL的优化有限，大部分优化都是通过 <code>JIT</code> 来完成的。而这篇文章也是围绕微软最新的 <code>RyuJIT</code> 编译器来展开，其可能与旧的 <code>JIT</code>有所区别，但是应该差异不大。</p><h2 id="Loop-Invariant"><a href="#Loop-Invariant" class="headerlink" title="Loop Invariant"></a>Loop Invariant</h2><p>首先看一下微软对 <a href="https://github.com/dotnet/coreclr/blob/master/Documentation/botr/ryujit-overview.md#loop-invariant-code-hoisting" target="_blank" rel="external"><code>Loop Invariant Code Hoisting</code></a> 的说明：</p><blockquote><p>This phase traverses all the loop nests, in outer-to-inner order (thus hoisting expressions outside the largest loop in which they are invariant). It traverses all of the statements in the blocks in the loop that are always executed. If the statement is:  </p><ul><li>A valid CSE candidate</li><li>Has no side-effects</li><li>Does not raise an exception OR occurs in the loop prior to any side-effects</li><li>Has a valid value number, and it is a lclVar defined outside the loop, or its children (the value numbers from which it was computed) are invariant.</li></ul></blockquote><p><code>JIT</code> 从外到内遍历所有的循环嵌套。它遍历循环嵌套结构中始终会被运行的<code>BasicBlock</code>（这是<code>JIT</code>里的类型，这里暂不展开，你可以暂时将其理解为编译器的基本类型）里的语句，并且这些语句符合以下条件：  </p><ul><li>是一个 <code>CSE</code></li><li>没有副作用</li><li>不会触发异常或者发生在任何副作用之前</li><li>拥有一个可用的数字，这个数字定义在循环嵌套外或者其子元素是不可变的</li></ul><hr><p>上面提到的始终会被运行的循环嵌套（loop that are always executed), 如何理解? 嗯…，简单来讲，我们知道的循环结构，例如大部分编程语言都会有的 for loop 和 do while loop，这两种循环嵌套中，do while loop 就符合一定会被执行的循环嵌套，因为循环判断在一次循环后才会执行，而有些for loop 也可以被转换为 do while loop, <code>JIT</code> 会判断这个loop能否转换为do while loop后才进行后续的 loop hoisting 操作。</p><h2 id="CSE-Common-Subexpression-Elimination"><a href="#CSE-Common-Subexpression-Elimination" class="headerlink" title="CSE - Common Subexpression Elimination"></a>CSE - Common Subexpression Elimination</h2><blockquote><p>Utilizes value numbers to identify redundant computations, which are then evaluated to a new temp lvlVar, and then reused.</p></blockquote><p>利用数字来识别（替代？）多余的计算，然后将它们计算为新的临时值，并重复利用。就如上篇文章中for循环中的 <code>x+y</code>。<br>观察<code>RyuJIT</code> 中用于判定<code>CSE</code>的函数片段：<br><figure class="highlight c++"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div><div class="line">26</div><div class="line">27</div><div class="line">28</div><div class="line">29</div><div class="line">30</div><div class="line">31</div><div class="line">32</div><div class="line">33</div><div class="line">34</div><div class="line">35</div><div class="line">36</div><div class="line">37</div><div class="line">38</div><div class="line">39</div><div class="line">40</div><div class="line">41</div><div class="line">42</div><div class="line">43</div><div class="line">44</div><div class="line">45</div><div class="line">46</div><div class="line">47</div><div class="line">48</div><div class="line">49</div><div class="line">50</div><div class="line">51</div><div class="line">52</div><div class="line">53</div><div class="line">54</div><div class="line">55</div><div class="line">56</div><div class="line">57</div></pre></td><td class="code"><pre><div class="line"><span class="comment">/*****************************************************************************</span></div><div class="line"> *</div><div class="line"> *  The following determines whether the given expression is a worthy CSE</div><div class="line"> *  candidate.</div><div class="line"> */</div><div class="line"><span class="keyword">bool</span> Compiler::optIsCSEcandidate(GenTreePtr tree)</div><div class="line">&#123;</div><div class="line">     <span class="comment">/* No good if the expression contains side effects or if it was marked as DONT CSE */</span></div><div class="line"></div><div class="line">    <span class="keyword">if</span>  (tree-&gt;gtFlags &amp; (GTF_ASG|GTF_DONT_CSE))</div><div class="line">    &#123;</div><div class="line">        <span class="keyword">return</span>  <span class="literal">false</span>;</div><div class="line">    &#125;</div><div class="line"></div><div class="line">    <span class="comment">/* The only reason a TYP_STRUCT tree might occur is as an argument to</span></div><div class="line">       GT_ADDR. It will never be actually materialized. So ignore them.</div><div class="line">       Also TYP_VOIDs */</div><div class="line"></div><div class="line">    var_types   type = tree-&gt;TypeGet();</div><div class="line">    genTreeOps  oper = tree-&gt;OperGet();</div><div class="line"></div><div class="line">    <span class="keyword">if</span> (type == TYP_STRUCT || type == TYP_VOID)</div><div class="line">        <span class="keyword">return</span> <span class="literal">false</span>;</div><div class="line"></div><div class="line">    ...</div><div class="line"></div><div class="line"><span class="meta">#<span class="meta-keyword">ifdef</span> _TARGET_X86_</span></div><div class="line">    <span class="keyword">if</span> (type == TYP_FLOAT)</div><div class="line">    &#123;</div><div class="line">        <span class="comment">// TODO-X86-CQ: Revisit this</span></div><div class="line">        <span class="comment">// Don't CSE a TYP_FLOAT on x86 as we currently can only enregister doubles </span></div><div class="line">        <span class="keyword">return</span> <span class="literal">false</span>;</div><div class="line">    &#125;</div><div class="line"><span class="meta">#<span class="meta-keyword">else</span></span></div><div class="line">    <span class="keyword">if</span> (oper == GT_CNS_DBL)</div><div class="line">    &#123;</div><div class="line">        <span class="comment">// TODO-CQ: Revisit this</span></div><div class="line">        <span class="comment">// Don't try to CSE a GT_CNS_DBL as they can represent both float and doubles</span></div><div class="line">        <span class="keyword">return</span> <span class="literal">false</span>;</div><div class="line">    &#125;</div><div class="line"><span class="meta">#<span class="meta-keyword">endif</span></span></div><div class="line"></div><div class="line">    ...</div><div class="line">  <span class="comment">/* Check for some special cases */</span></div><div class="line"></div><div class="line">    <span class="keyword">switch</span> (oper)</div><div class="line">    &#123;</div><div class="line">        ...</div><div class="line"></div><div class="line">        <span class="keyword">case</span> GT_LCL_VAR:</div><div class="line">        <span class="keyword">return</span>  <span class="literal">false</span>;   <span class="comment">// Can't CSE a volatile LCL_VAR</span></div><div class="line"></div><div class="line">        ...</div><div class="line">    &#125;</div><div class="line"></div><div class="line">    ...</div><div class="line">&#125;</div></pre></td></tr></table></figure></p><p>当然，这个函数还有许多细节，这里只挑选几个典型的片段。看代码可以知道：  </p><ul><li><strong>可以明确指定不能使用CSE</strong></li><li><strong>不能有赋值表达式</strong></li><li><strong>x86下 float 不能作为CSE, x64下不支持 float 和 double</strong></li><li><strong>不支持struct和void</strong> </li><li><strong>如果是可变(volatile)的变量，也不能作为CSE，这在之前的一篇<a href="./2018/12/26/csharp-memory-model-part-1/">文章</a>中有对 volatile 的说明</strong></li></ul><p><code>Loop-Hoisting</code> 还有颇多细节这里并没有覆盖，有兴趣可以去看源码：<a href="https://github.com/dotnet/coreclr/blob/release/1.0.0-rc1/src/jit/optimizer.cpp" target="_blank" rel="external">https://github.com/dotnet/coreclr/blob/release/1.0.0-rc1/src/jit/optimizer.cpp</a> </p>]]></content>
+    
+    <summary type="html">
+    
+      
+      
+        &lt;p&gt;在上一篇&lt;a href=&quot;./2019/01/15/loop-hoisting/&quot;&gt;文章&lt;/a&gt;中，我们已经对 &lt;code&gt;Loop Invariant&lt;/code&gt; 概念有一个简单的了解，在文章的最后提到的 &lt;code&gt;Loop Invariant&lt;/code&gt; 将在这篇
+      
+    
+    </summary>
+    
+      <category term="技术" scheme="https://gandalfliang.github.io/categories/%E6%8A%80%E6%9C%AF/"/>
+    
+    
+      <category term="C#" scheme="https://gandalfliang.github.io/tags/C/"/>
+    
+      <category term="编译器优化" scheme="https://gandalfliang.github.io/tags/%E7%BC%96%E8%AF%91%E5%99%A8%E4%BC%98%E5%8C%96/"/>
+    
+      <category term="Loop Hoisting" scheme="https://gandalfliang.github.io/tags/Loop-Hoisting/"/>
+    
+      <category term="RyuJIT" scheme="https://gandalfliang.github.io/tags/RyuJIT/"/>
+    
+      <category term="Loop Invariant Hoisting" scheme="https://gandalfliang.github.io/tags/Loop-Invariant-Hoisting/"/>
+    
+  </entry>
+  
+  <entry>
     <title>Loop Hoisting</title>
     <link href="https://gandalfliang.github.io/2019/01/15/loop-hoisting/"/>
     <id>https://gandalfliang.github.io/2019/01/15/loop-hoisting/</id>
     <published>2019-01-14T17:52:23.000Z</published>
-    <updated>2019-01-16T11:44:11.195Z</updated>
+    <updated>2019-01-17T11:17:32.045Z</updated>
     
     <content type="html"><![CDATA[<p>在<a href="https://gandalfliang.github.io/2018/12/26/csharp-memory-model-part-1/">上篇文章</a>中，提到 <code>Loop Hoisting</code> ，这是一个常见的编译器优化项。我们总是能通过汇编代码等低级语言来“窥探”代码实际是怎么“指示”硬件运行的（这边文章不会涉及到详细的汇编内容，但是会用C#反编译后得到的汇编代码来辅助说明）。如果你看过我前面的几篇文章，会发现我用了大量反编译后的汇编代码来辅助说明，毕竟，千言不如实际的“证据”有说服力。</p><hr><p>言归正传，<code>Loop Hoisting</code>，循环提升（粗略的翻译），编译器对循环代码中 <code>loop-invariant</code> 的代码提取出循环体外，防止循环结构内CPU对主存的重复读取。这很好理解，减少 CPU 与主存之间的 <code>IO</code> 次数，能有效提升程序的运行效率。观察下面的例子：<br><figure class="highlight javascript"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div></pre></td><td class="code"><pre><div class="line">namespace loop_hoisting</div><div class="line">&#123;</div><div class="line">    <span class="class"><span class="keyword">class</span> <span class="title">Program</span></span></div><div class="line">    &#123;</div><div class="line">        <span class="keyword">static</span> <span class="keyword">void</span> Main(string[] args)</div><div class="line">        &#123;</div><div class="line">            int[] array = <span class="keyword">new</span> int[] &#123; <span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span> &#125;;</div><div class="line">            int x = <span class="number">10</span>;</div><div class="line">            int y = <span class="number">11</span>;</div><div class="line"></div><div class="line">            LoopHoistTest(array, x, y);</div><div class="line">        &#125;</div><div class="line"></div><div class="line">        <span class="keyword">static</span> <span class="keyword">void</span> LoopHoistTest(int[] array, int x, int y)</div><div class="line">        &#123;</div><div class="line">            <span class="keyword">for</span> (int i = <span class="number">0</span>; i &lt; array.Length; i++)</div><div class="line">            &#123;</div><div class="line">                array[i] = x + y;</div><div class="line">            &#125;</div><div class="line">        &#125;</div><div class="line">    &#125;</div><div class="line">&#125;</div></pre></td></tr></table></figure></p><p>很简单的一个例子，遍历列表且赋值。<code>LoopHoistTest</code> 函数的循环判断里，直接读取列表的长度，编译器在碰到这种情况，会对其进行优化，将对列表长度的读取进行提升（Hoist)，在循环体入口处缓存列表长度，并以此为判断依据，也就是说，从汇编代码的角度，循环判断始终去寄存器中读取缓存的列表长度信息，而不是每次都到主存中读取，以此来提到运行效率。另外，<code>x+y</code>很明显也是一段 <code>loop-invariant</code> 代码，相似地，编译器会将 <code>x+y</code> 的值缓存在某个通用寄存器内，并以此做赋值运算。编译器优化后的代码，就相当于：<br><figure class="highlight javascript"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div><div class="line">23</div><div class="line">24</div><div class="line">25</div></pre></td><td class="code"><pre><div class="line">namespace loop_hoisting</div><div class="line">&#123;</div><div class="line">    <span class="class"><span class="keyword">class</span> <span class="title">Program</span></span></div><div class="line">    &#123;</div><div class="line">        <span class="keyword">static</span> <span class="keyword">void</span> Main(string[] args)</div><div class="line">        &#123;</div><div class="line">            int[] array = <span class="keyword">new</span> int[] &#123; <span class="number">1</span>, <span class="number">2</span>, <span class="number">3</span> &#125;;</div><div class="line">            int x = <span class="number">10</span>;</div><div class="line">            int y = <span class="number">11</span>;</div><div class="line"></div><div class="line">            LoopHoistTest(array, x, y);</div><div class="line">        &#125;</div><div class="line"></div><div class="line">        <span class="keyword">static</span> <span class="keyword">void</span> LoopHoistTest(int[] array, int x, int y)</div><div class="line">        &#123;</div><div class="line">            int length = array.Length;</div><div class="line">            int sum = x+y;</div><div class="line"></div><div class="line">            <span class="keyword">for</span> (int i = <span class="number">0</span>; i &lt; length; i++)</div><div class="line">            &#123;</div><div class="line">                array[i] = sum;</div><div class="line">            &#125;</div><div class="line">        &#125;</div><div class="line">    &#125;</div><div class="line">&#125;</div></pre></td></tr></table></figure></p><p>观察汇编代码：<br><img src="/2019/01/15/loop-hoisting/optLoopHoisting_opted.png" alt="optLoopHoisting_opted.png" title=""><br>第一个红色框选的汇编代码：<br><figure class="highlight javascript"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">mov   ebx,dword ptr [rsi+<span class="number">8</span>] <span class="comment">//将rsi寄存器值加上8的偏移量指向的主存中的值复制到ebx通用寄存器</span></div></pre></td></tr></table></figure></p><p>其中 <code>rsi</code> 寄存器中的值就是主存中 <code>array</code> 的地址，偏移的8位指向 <code>length</code>  字段，这段指令将数值中的长度信息储存在 <code>ebx</code> 通用寄存器中，并且在以后的 <code>cmp</code> 指令中使用，而不是直接与主存中的内容比较。<br><figure class="highlight javascript"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">lea   ebp,[rdx+r8] <span class="comment">//将 rdx 和 r8 寄存器中的值相加并传送到 ebp 寄存器</span></div></pre></td></tr></table></figure></p><p>其中，<code>rdx</code> 和 <code>r8</code> 寄存器分别储存着 x 和 y 的值，两者的和被储存在 <code>ebp</code> 寄存器，以后的指令都使用这个寄存器中的值，不再重复计算。  </p><p>当然，并不是所有的循环代码都可以被优化，这涉及到 <code>Loop-invariant</code> 条件的判定，我们下篇文章再讲。</p>]]></content>
     
@@ -33,6 +66,8 @@
       
     
     </summary>
+    
+      <category term="技术" scheme="https://gandalfliang.github.io/categories/%E6%8A%80%E6%9C%AF/"/>
     
     
       <category term="C#" scheme="https://gandalfliang.github.io/tags/C/"/>
@@ -478,9 +513,9 @@
     
       <category term="WPF" scheme="https://gandalfliang.github.io/tags/WPF/"/>
     
-      <category term="渲染" scheme="https://gandalfliang.github.io/tags/%E6%B8%B2%E6%9F%93/"/>
-    
       <category term="DirectX" scheme="https://gandalfliang.github.io/tags/DirectX/"/>
+    
+      <category term="渲染" scheme="https://gandalfliang.github.io/tags/%E6%B8%B2%E6%9F%93/"/>
     
       <category term="Profiling" scheme="https://gandalfliang.github.io/tags/Profiling/"/>
     
@@ -507,11 +542,11 @@
       <category term="技术" scheme="https://gandalfliang.github.io/categories/%E6%8A%80%E6%9C%AF/"/>
     
     
+      <category term="D3DImage" scheme="https://gandalfliang.github.io/tags/D3DImage/"/>
+    
       <category term="WPF" scheme="https://gandalfliang.github.io/tags/WPF/"/>
     
       <category term="DirectX" scheme="https://gandalfliang.github.io/tags/DirectX/"/>
-    
-      <category term="D3DImage" scheme="https://gandalfliang.github.io/tags/D3DImage/"/>
     
   </entry>
   
@@ -568,38 +603,11 @@
       <category term="技术" scheme="https://gandalfliang.github.io/categories/%E6%8A%80%E6%9C%AF/"/>
     
     
+      <category term="D3DImage" scheme="https://gandalfliang.github.io/tags/D3DImage/"/>
+    
       <category term="WPF" scheme="https://gandalfliang.github.io/tags/WPF/"/>
     
       <category term="DirectX" scheme="https://gandalfliang.github.io/tags/DirectX/"/>
-    
-      <category term="D3DImage" scheme="https://gandalfliang.github.io/tags/D3DImage/"/>
-    
-  </entry>
-  
-  <entry>
-    <title>【翻译】There Is No Thread</title>
-    <link href="https://gandalfliang.github.io/2017/05/02/ThereIsNoThread/"/>
-    <id>https://gandalfliang.github.io/2017/05/02/ThereIsNoThread/</id>
-    <published>2017-05-02T10:14:58.000Z</published>
-    <updated>2018-02-12T07:24:05.690Z</updated>
-    
-    <content type="html"><![CDATA[<h2 id="这里并没有线程"><a href="#这里并没有线程" class="headerlink" title="这里并没有线程"></a>这里并没有线程</h2><p>原文地址： <a href="http://blog.stephencleary.com/2013/11/there-is-no-thread.html" target="_blank" rel="external">http://blog.stephencleary.com/2013/11/there-is-no-thread.html</a></p><hr><p>最纯粹的async形式中存在一个重要的真相：这里并没有线程（或者不存在新建的线程）<br>举不胜数的反对者哭喊道：“不！如果我正在等待一个操作，那一定存在一个线程在等待这个操作！它可能是一个线程池中的线程。或者是系统线程！或者是其他类似设备驱动的东西…”。</p><p>不要听从那些哭喊的人。如果那些async操作是纯粹的，那么这里将不会存在线程。</p><p>那些持怀疑态度的人并没有被说服。让我们来娱乐一下他们。</p><p>我们可以一路跟踪一条异步操作指令到硬件层面，特别留意其中的.Net部分和设备驱动部分。为了简化这部分描述，我们排除掉部分中间层的细节，但是这应该不会让我们偏离真相。</p><p>思考一个通用的“写”操作（写一个文件、网络流、USB等等）。我们的代码很简单：</p><figure class="highlight javascript"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div></pre></td><td class="code"><pre><div class="line">private <span class="keyword">async</span> <span class="keyword">void</span> Button_Clicked(object sender, RoutedEventArgs e)</div><div class="line">&#123;</div><div class="line">    byte[] data = ...</div><div class="line">    await myDevice.WriteAsync(data, <span class="number">0</span>, data.Length);</div><div class="line">&#125;</div></pre></td></tr></table></figure><p>我们早就知道，UI线程并不会被await操作阻塞。那么问题来了：这里是不是存在另外一个线程，它牺牲自己所以UI线程才能存活？  </p><p>抓住我的手，我们要潜的更深一点。</p><p>第一站：类库（例如，查看BCL代码）。我们假设 WriteAsync 是用 .Net 标准的 P/Invoke 异步 I/O 操作实现的。所以，这个操作在设备的句柄上开始了一个Win32的重叠I/O操作。</p><p>系统紧接着转到设备驱动并让设备开始写操作。它首先构造一个表示写请求的对象，这被称为I/O Request Packet(IRP)。设备驱动获得这个IRP并向设备发起命令来写对应的数据。如果设备支持Direct Memory Access(DMA)，这个操作就像向设备寄存器中写入缓存地址一样简单。这是设备驱动能做的所有事情；它使得IRP进入“等待”并转回到系统。</p><p><img src="http://blog.stephencleary.com/assets/Os1.png" alt=""></p><p>事实的核心：当处理IRP时，设备驱动不允许堵塞。这意味着，如果IRP不能立即完成，那么它一定要异步执行。这对于同步API也一样成立。在设备驱动这一层，所有（重要的）请求都是异步的。<br>随着IRP进入“等待”状态，系统通过返回一个未完成的Task给刚才堵塞的async按钮点击事件，然后UI线程继续执行。<br>我们深入追踪到系统底层的写操作，直至物理设备。<br>现在，写操作正在执行，那有多少线程在处理它呢？  </p><h3 id="一个都没有"><a href="#一个都没有" class="headerlink" title="一个都没有"></a>一个都没有</h3><p>这里并没有设备驱动线程，系统线程，BLC线程或者线程池线程在处理那个写操作。<strong>这里根本就没有线程</strong><br>现在，我们看一下对应的回复（Response)。<br>写请求开始片刻，设备完成了写操作，他通过中断（Interrupt)通知CPU。<br>设备驱动的Interrupt Service Routine(ISR)对这个中断做出反应。中断是CPU层的时间，它会临时从当前CPU所运行的线程中获得CPU的控制权。你可以认为ISR是在“借用”当前正在运行的线程，但是我更倾向于认为ISR在更底层中执行，底层到根本不存在线程这个概念的水平。或者说它在所有线程之下。<br>无论如何，ISR已经被妥当的进行了写操作，它做的所有事情就是告诉设备“谢谢你的中断请求”并且将一个Deferred Procedure Call(DPC)入队（queue)。<br>当CPU被中断“骚扰”完之后，它会转向它的DPC。DPC也是在一个不能直接用线程描述的底层水平。和ISR一样，DPC直接在CPU上执行，在线程系统之下。<br>DPC获取代表写操作的ISR并将其标志成“完成”。然而，那么“完成”状态只存在系统层；必须要通知到进程自己拥有的内存空间。所以系统会入队一个special-kernel-mode Asynchronous Procedure Call(APC)给拥有HANDLE的线程。<br>因为上述提到的类库/BLC使用的是标准P/Inovke Overlapped I/O 系统，它早就注册了I/O Completion Port(IOCP)的句柄，这个句柄是线程池的一部分。所以，一个I/O线程池线程被短暂的“借用”来执行APC,通过它来通知task已经完成。<br>现在task捕获了UI线程的上下文，它不直接从线程池线程中返回async方法，相反，它将async方法后续的执行加入到UI线程的上下文，当UI线程执行到这里的时候就会继续执行这部分代码。<br>所以，当请求发生时，我们可以看到这里并没有线程。当请求完成时，大量的线程被“借用”或者短暂暂存到它们那里。这些工作大约在一毫秒（运行在线程池的APC)或者低到一微秒（例如ISR)。但是这里并没有线程因为等待请求完毕而被堵塞。</p><p><img src="http://blog.stephencleary.com/assets/Os2.png" alt=""></p>]]></content>
-    
-    <summary type="html">
-    
-      
-      
-        &lt;h2 id=&quot;这里并没有线程&quot;&gt;&lt;a href=&quot;#这里并没有线程&quot; class=&quot;headerlink&quot; title=&quot;这里并没有线程&quot;&gt;&lt;/a&gt;这里并没有线程&lt;/h2&gt;&lt;p&gt;原文地址： &lt;a href=&quot;http://blog.stephencleary.com/2013/
-      
-    
-    </summary>
-    
-      <category term="翻译" scheme="https://gandalfliang.github.io/categories/%E7%BF%BB%E8%AF%91/"/>
-    
-    
-      <category term="翻译" scheme="https://gandalfliang.github.io/tags/%E7%BF%BB%E8%AF%91/"/>
-    
-      <category term="async/await" scheme="https://gandalfliang.github.io/tags/async-await/"/>
     
   </entry>
   
