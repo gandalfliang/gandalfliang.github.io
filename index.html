@@ -265,7 +265,7 @@
 <li><strong>不能有赋值表达式</strong></li>
 <li><strong>x86下 float 不能作为CSE, x64下不支持 float 和 double</strong></li>
 <li><strong>不支持struct和void</strong> </li>
-<li><strong>如果是可变(volatile)的变量，也不能作为CSE，这在之前的一篇<a href="./2018/12/26/csharp-memory-model-part-1/">文章</a>中有对 volatile 的说明</strong></li>
+<li><strong>如果是可变(volatile)的变量，也不能作为CSE，这在之前的一篇<a href="https://gandalfliang.github.io/2018/12/26/csharp-memory-model-part-1/">文章</a>中有对 volatile 的说明</strong></li>
 </ul>
 <p><code>Loop-Hoisting</code> 还有颇多细节这里并没有覆盖，有兴趣可以去看源码：<a href="https://github.com/dotnet/coreclr/blob/master/src/jit/optimizer.cpp" target="_blank" rel="external">https://github.com/dotnet/coreclr/blob/master/src/jit/optimizer.cpp</a></p>
 
