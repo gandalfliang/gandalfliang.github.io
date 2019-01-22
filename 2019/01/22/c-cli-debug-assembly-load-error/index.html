@@ -3,14 +3,24 @@
 <head>
     <meta charset="utf-8">
     
-    <title>标签: BUG | gandalfliang的个人博客</title>
+    <title>定位 C++/CLI 库的加载失败异常 | gandalfliang的个人博客</title>
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
-    <meta property="og:type" content="website">
-<meta property="og:title" content="gandalfliang的个人博客">
-<meta property="og:url" content="https://gandalfliang.github.io/tags/BUG/index.html">
+    <meta name="description" content=".NET Framework 程序在加载 C++/CLI 动态库的时候，出现 FileLoadException，常见错误是其中某些依赖没有找到，这个时候异常信息应该是类似：一个xxx的依赖没有找到；这个问题很好解决，确定缺少的依赖补充上就可以了，可以使用 dumpbin 工具查看相关的依赖：1dumpbin /dependents target.dll
+但是，有一种比较隐晦的错误导致动态库加载失">
+<meta property="og:type" content="article">
+<meta property="og:title" content="定位 C++/CLI 库的加载失败异常">
+<meta property="og:url" content="https://gandalfliang.github.io/2019/01/22/c-cli-debug-assembly-load-error/index.html">
 <meta property="og:site_name" content="gandalfliang的个人博客">
+<meta property="og:description" content=".NET Framework 程序在加载 C++/CLI 动态库的时候，出现 FileLoadException，常见错误是其中某些依赖没有找到，这个时候异常信息应该是类似：一个xxx的依赖没有找到；这个问题很好解决，确定缺少的依赖补充上就可以了，可以使用 dumpbin 工具查看相关的依赖：1dumpbin /dependents target.dll
+但是，有一种比较隐晦的错误导致动态库加载失">
+<meta property="og:image" content="https://gandalfliang.github.io/2019/01/22/c-cli-debug-assembly-load-error/gflags.png">
+<meta property="og:image" content="https://gandalfliang.github.io/2019/01/22/c-cli-debug-assembly-load-error/locate_error.png">
+<meta property="og:updated_time" content="2019-01-22T11:23:10.369Z">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="gandalfliang的个人博客">
+<meta name="twitter:title" content="定位 C++/CLI 库的加载失败异常">
+<meta name="twitter:description" content=".NET Framework 程序在加载 C++/CLI 动态库的时候，出现 FileLoadException，常见错误是其中某些依赖没有找到，这个时候异常信息应该是类似：一个xxx的依赖没有找到；这个问题很好解决，确定缺少的依赖补充上就可以了，可以使用 dumpbin 工具查看相关的依赖：1dumpbin /dependents target.dll
+但是，有一种比较隐晦的错误导致动态库加载失">
+<meta name="twitter:image" content="https://gandalfliang.github.io/2019/01/22/c-cli-debug-assembly-load-error/gflags.png">
     
 
     
@@ -185,50 +195,124 @@
 </aside>
 
             
-            <section id="main">
-<div class="timeline timeline-wrap">
-    <div class="timeline-row timeline-row-major">
-        <span class="node"><i class="fa fa-tag"></i></span>
-        <h1 class="title">#BUG</h1>
-    </div>
-    
-        <div class="timeline-row">
-            <span class="node"></span>
-            <div class="content">
+            <section id="main"><article id="post-c-cli-debug-assembly-load-error" class="article article-type-post" itemscope itemprop="blogPost">
+    <div class="article-inner">
+        
+        
+            <header class="article-header">
                 
     
-        <h1 itemprop="name">
-            <a class="timeline-article-title" href="/2017/12/02/WPFLostTouchCapability/">“阻断疗法” - 拯救 WPF 启动过程中发生设备热插拔导致触摸失效问题</a>
+        <h1 class="article-title" itemprop="name">
+            定位 C++/CLI 库的加载失败异常
         </h1>
     
 
-                <div class="article-meta">
-                    
+                
+                    <div class="article-meta">
+                        
     <div class="article-date">
         <i class="fa fa-calendar"></i>
-        <a href="/2017/12/02/WPFLostTouchCapability/">
-            <time datetime="2017-12-02T05:58:27.000Z" itemprop="datePublished">2017-12-02</time>
+        <a href="/2019/01/22/c-cli-debug-assembly-load-error/">
+            <time datetime="2019-01-22T11:18:13.000Z" itemprop="datePublished">2019-01-22</time>
         </a>
     </div>
 
 
-                    
+                        
     <div class="article-category">
     	<i class="fa fa-folder"></i>
         <a class="article-category-link" href="/categories/技术/">技术</a>
     </div>
 
-                    
+                        
     <div class="article-tag">
         <i class="fa fa-tag"></i>
-        <a class="tag-link" href="/tags/BUG/">BUG</a>, <a class="tag-link" href="/tags/WPF/">WPF</a>
+        <a class="tag-link" href="/tags/C-CLI/">C++/CLI</a>, <a class="tag-link" href="/tags/Visual-Studio/">Visual Studio</a>, <a class="tag-link" href="/tags/调试/">调试</a>
     </div>
 
-                </div>
-            </div>
+                    </div>
+                
+            </header>
+        
+        
+        <div class="article-entry" itemprop="articleBody">
+        
+            
+            <p>.NET Framework 程序在加载 C++/CLI 动态库的时候，出现 <code>FileLoadException</code>，常见错误是其中某些依赖没有找到，这个时候异常信息应该是类似：一个xxx的依赖没有找到；这个问题很好解决，确定缺少的依赖补充上就可以了，可以使用 <code>dumpbin</code> 工具查看相关的依赖：<br><figure class="highlight javascript"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">dumpbin /dependents target.dll</div></pre></td></tr></table></figure></p>
+<p>但是，有一种比较隐晦的错误导致动态库加载失败，错误提示：<code>未能加载由xxx.dll导入的过程</code>，除了这些，几乎没有什么有用的错误信息让我们来确定到底出现了什么问题。一般来说，按照目前我遇到的问题，这个一般都是对应的库文件调用了当前平台不支持的api导致的。当然，这个问题不易在开发的机器上发现，因为能调用到这个api就代表调试机器上有对应平台版本的SDK，一般如果前期没有发现到这个问题，那么问题被发现时肯定是在生成环境，所以需要开发人员注意调用接口的支持平台。  </p>
+<p>要定位是什么接口导致的问题，需要借助其他的调试工具来排查。微软的 Windows SDK 提供了对应的工具 <code>gflags.exe</code>，借助这个工具，我们可以在调试的过程中看到详细的动态库加载信息，在这些信息中可以定位到底是什么接口导致库文件加载失败。当然，你需要在出现问题的机器上使用这个工具进行操作，并通过 Visual Studio 进行远程调试。  </p>
+<img src="/2019/01/22/c-cli-debug-assembly-load-error/gflags.png" alt="gflags.png" title="">  
+<p>如上图显示，通过输入你程序的名字和开启 <code>Show loader snaps</code> 开关，应用后使用 Visual Studio 进行调试，可以在输出窗口看到详细的加载信息： </p>
+<img src="/2019/01/22/c-cli-debug-assembly-load-error/locate_error.png" alt="locate_error.png" title="">  
+        
         </div>
-    
+        <footer class="article-footer">
+            <div class="share-container">
+
+
+    <div class="bdsharebuttonbox">
+    <a href="#" class="bds_more" data-cmd="more">分享到：</a>
+    <a href="#" class="bds_weixin" data-cmd="weixin" title="分享到微信">微信</a>    
+    <a href="#" class="bds_sqq" data-cmd="qzone" title="分享给QQ好友">QQ</a>
+    <a href="#" class="bds_tsina" data-cmd="tsina" title="分享到新浪微博">新浪微博</a>
 </div>
+<script>
+window._bd_share_config={"common":{"bdSnsKey":{},"bdText":"","bdMini":"2","bdMiniList":false,"bdPic":"","bdStyle":"0","bdSize":"16"},"share":{"bdSize":16}};with(document)0[(getElementsByTagName('head')[0]||body).appendChild(createElement('script')).src='http://bdimg.share.baidu.com/static/api/js/share.js?v=89860593.js?cdnversion='+~(-new Date()/36e5)];
+</script>
+<style>
+    .bdshare_popup_box {
+        border-radius: 4px;
+        border: #e1e1e1 solid 1px;
+    }
+    .bdshare-button-style0-16 a,
+    .bdshare-button-style0-16 .bds_more {
+        padding-left: 20px;
+        margin: 6px 10px 6px 0;
+    }
+    .bdshare_dialog_list a,
+    .bdshare_popup_list a,
+    .bdshare_popup_bottom a {
+        font-family: 'Microsoft Yahei';
+    }
+    .bdshare_popup_top {
+        display: none;
+    }
+    .bdshare_popup_bottom {
+        height: auto;
+        padding: 5px;
+    }
+</style>
+
+
+</div>
+
+            
+    
+
+        </footer>
+    </div>
+    
+        
+<nav id="article-nav">
+    
+    
+        <a href="/2019/01/17/jit-loop-invariant-hoisting/" id="article-nav-older" class="article-nav-link-wrap">
+            <strong class="article-nav-caption">下一篇</strong>
+            <div class="article-nav-title">JIT Loop Invariant Hoisting</div>
+        </a>
+    
+</nav>
+
+
+    
+</article>
+
+
+    
+    <section id="comments">
+    
+    </section>
+
 </section>
             
                 <aside id="sidebar">

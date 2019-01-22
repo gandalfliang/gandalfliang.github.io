@@ -6,7 +6,7 @@
   <link href="/atom.xml" rel="self"/>
   
   <link href="https://gandalfliang.github.io/"/>
-  <updated>2019-01-18T02:22:57.970Z</updated>
+  <updated>2019-01-22T11:23:10.369Z</updated>
   <id>https://gandalfliang.github.io/</id>
   
   <author>
@@ -15,6 +15,35 @@
   </author>
   
   <generator uri="http://hexo.io/">Hexo</generator>
+  
+  <entry>
+    <title>定位 C++/CLI 库的加载失败异常</title>
+    <link href="https://gandalfliang.github.io/2019/01/22/c-cli-debug-assembly-load-error/"/>
+    <id>https://gandalfliang.github.io/2019/01/22/c-cli-debug-assembly-load-error/</id>
+    <published>2019-01-22T11:18:13.000Z</published>
+    <updated>2019-01-22T11:23:10.369Z</updated>
+    
+    <content type="html"><![CDATA[<p>.NET Framework 程序在加载 C++/CLI 动态库的时候，出现 <code>FileLoadException</code>，常见错误是其中某些依赖没有找到，这个时候异常信息应该是类似：一个xxx的依赖没有找到；这个问题很好解决，确定缺少的依赖补充上就可以了，可以使用 <code>dumpbin</code> 工具查看相关的依赖：<br><figure class="highlight javascript"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">dumpbin /dependents target.dll</div></pre></td></tr></table></figure></p><p>但是，有一种比较隐晦的错误导致动态库加载失败，错误提示：<code>未能加载由xxx.dll导入的过程</code>，除了这些，几乎没有什么有用的错误信息让我们来确定到底出现了什么问题。一般来说，按照目前我遇到的问题，这个一般都是对应的库文件调用了当前平台不支持的api导致的。当然，这个问题不易在开发的机器上发现，因为能调用到这个api就代表调试机器上有对应平台版本的SDK，一般如果前期没有发现到这个问题，那么问题被发现时肯定是在生成环境，所以需要开发人员注意调用接口的支持平台。  </p><p>要定位是什么接口导致的问题，需要借助其他的调试工具来排查。微软的 Windows SDK 提供了对应的工具 <code>gflags.exe</code>，借助这个工具，我们可以在调试的过程中看到详细的动态库加载信息，在这些信息中可以定位到底是什么接口导致库文件加载失败。当然，你需要在出现问题的机器上使用这个工具进行操作，并通过 Visual Studio 进行远程调试。  </p><img src="/2019/01/22/c-cli-debug-assembly-load-error/gflags.png" alt="gflags.png" title="">  <p>如上图显示，通过输入你程序的名字和开启 <code>Show loader snaps</code> 开关，应用后使用 Visual Studio 进行调试，可以在输出窗口看到详细的加载信息： </p><img src="/2019/01/22/c-cli-debug-assembly-load-error/locate_error.png" alt="locate_error.png" title="">  ]]></content>
+    
+    <summary type="html">
+    
+      
+      
+        &lt;p&gt;.NET Framework 程序在加载 C++/CLI 动态库的时候，出现 &lt;code&gt;FileLoadException&lt;/code&gt;，常见错误是其中某些依赖没有找到，这个时候异常信息应该是类似：一个xxx的依赖没有找到；这个问题很好解决，确定缺少的依赖补充上就可以了，
+      
+    
+    </summary>
+    
+      <category term="技术" scheme="https://gandalfliang.github.io/categories/%E6%8A%80%E6%9C%AF/"/>
+    
+    
+      <category term="Visual Studio" scheme="https://gandalfliang.github.io/tags/Visual-Studio/"/>
+    
+      <category term="C++/CLI" scheme="https://gandalfliang.github.io/tags/C-CLI/"/>
+    
+      <category term="调试" scheme="https://gandalfliang.github.io/tags/%E8%B0%83%E8%AF%95/"/>
+    
+  </entry>
   
   <entry>
     <title>JIT Loop Invariant Hoisting</title>
@@ -579,35 +608,6 @@
       <category term="音视频" scheme="https://gandalfliang.github.io/tags/%E9%9F%B3%E8%A7%86%E9%A2%91/"/>
     
       <category term="解码" scheme="https://gandalfliang.github.io/tags/%E8%A7%A3%E7%A0%81/"/>
-    
-  </entry>
-  
-  <entry>
-    <title>D3DImage in WPF</title>
-    <link href="https://gandalfliang.github.io/2017/06/11/D3DImageInWPF/"/>
-    <id>https://gandalfliang.github.io/2017/06/11/D3DImageInWPF/</id>
-    <published>2017-06-11T15:10:50.000Z</published>
-    <updated>2018-02-12T07:23:29.192Z</updated>
-    
-    <content type="html"><![CDATA[<p>在.Net Framework 3.5 SP1中，微软在WPF中提供了D3DImage对象，D3DImage是一个ImageSource，这可以让我们在WPF原生的D3D Surface上渲染Direct3D Surface，大大提高了WPF和DirectX内容的交互性。<br>在此之前，要想在WPF上渲染DirectX的内容，只能让DirectX直接渲染到窗口上，这样会造成不可避免的Airspace问题，因为DirectX内容要时刻刷新重绘，导致WPF窗口上的其他内容被覆盖，表现就是DirectX内容始终在窗口最顶层。<br>正如前面所说，D3DImage是一个ImageSource，在WPF中，这意味着，我们可以将一个3D场景变成一个Image对象的Source，或者构建一个ImageBrush，这意味这D3D Surface可以渲染到WPF中任意一个以Brush进行渲染的元素上，例如图片，文本前景色，元素背景色等等。<br>如下，就是一个典型的应用D3DImage的代码：<br><figure class="highlight javascript"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div></pre></td><td class="code"><pre><div class="line"><span class="keyword">if</span> (d3dimg.IsFrontBufferAvailable)</div><div class="line">&#123;</div><div class="line">    IntPtr pSurface = IntPtr.Zero;</div><div class="line">    pSurface = _view.GetBackBuffer();</div><div class="line"></div><div class="line">    <span class="keyword">if</span> (pSurface != IntPtr.Zero)</div><div class="line">    &#123;</div><div class="line">        d3dimg.Lock();</div><div class="line">        d3dimg.SetBackBuffer(D3DResourceType.IDirect3DSurface9,pSurface);</div><div class="line">        _view.Draw();</div><div class="line">        d3dimg.AddDirtyRect(<span class="keyword">new</span> Int32Rect(<span class="number">0</span>, <span class="number">0</span>, d3dimg.PixelWidth, d3dimg.PixelHeight));</div><div class="line">        d3dimg.Unlock();</div><div class="line">    &#125;</div><div class="line">&#125;</div></pre></td></tr></table></figure></p><p>只需要Direct3D内容渲染的Surface接口指针即可，如上面的pSurface。</p>]]></content>
-    
-    <summary type="html">
-    
-      
-      
-        &lt;p&gt;在.Net Framework 3.5 SP1中，微软在WPF中提供了D3DImage对象，D3DImage是一个ImageSource，这可以让我们在WPF原生的D3D Surface上渲染Direct3D Surface，大大提高了WPF和DirectX内容的交互性。&lt;
-      
-    
-    </summary>
-    
-      <category term="技术" scheme="https://gandalfliang.github.io/categories/%E6%8A%80%E6%9C%AF/"/>
-    
-    
-      <category term="D3DImage" scheme="https://gandalfliang.github.io/tags/D3DImage/"/>
-    
-      <category term="WPF" scheme="https://gandalfliang.github.io/tags/WPF/"/>
-    
-      <category term="DirectX" scheme="https://gandalfliang.github.io/tags/DirectX/"/>
     
   </entry>
   
