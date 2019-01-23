@@ -542,9 +542,9 @@
     
       <category term="WPF" scheme="https://gandalfliang.github.io/tags/WPF/"/>
     
-      <category term="DirectX" scheme="https://gandalfliang.github.io/tags/DirectX/"/>
-    
       <category term="渲染" scheme="https://gandalfliang.github.io/tags/%E6%B8%B2%E6%9F%93/"/>
+    
+      <category term="DirectX" scheme="https://gandalfliang.github.io/tags/DirectX/"/>
     
       <category term="Profiling" scheme="https://gandalfliang.github.io/tags/Profiling/"/>
     
@@ -571,11 +571,11 @@
       <category term="技术" scheme="https://gandalfliang.github.io/categories/%E6%8A%80%E6%9C%AF/"/>
     
     
-      <category term="D3DImage" scheme="https://gandalfliang.github.io/tags/D3DImage/"/>
-    
       <category term="WPF" scheme="https://gandalfliang.github.io/tags/WPF/"/>
     
       <category term="DirectX" scheme="https://gandalfliang.github.io/tags/DirectX/"/>
+    
+      <category term="D3DImage" scheme="https://gandalfliang.github.io/tags/D3DImage/"/>
     
   </entry>
   

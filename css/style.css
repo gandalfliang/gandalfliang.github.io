@@ -134,7 +134,7 @@ code {
   padding: 3px 5px;
   font-size: 1em;
   border-radius: 2px;
-  font-family: "Source Code Pro", Consolas, Monaco, Menlo, Consolas, monospace;
+  font-family: "Source Code Pro", Consolas, Monaco, Menlo, Consolas, monospace, "Microsoft Yahei";
   background-color: #fcedea;
 }
 .outer {
@@ -2096,7 +2096,7 @@ table th {
   overflow-x: auto;
   padding: 15px 20px;
   font-size: 14px;
-  font-family: "Source Code Pro", Consolas, Monaco, Menlo, Consolas, monospace;
+  font-family: "Source Code Pro", Consolas, Monaco, Menlo, Consolas, monospace, "Microsoft Yahei";
   line-height: 22.400000000000002px;
 }
 .highlight table {
