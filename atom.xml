@@ -6,7 +6,7 @@
   <link href="/atom.xml" rel="self"/>
   
   <link href="https://gandalfliang.github.io/"/>
-  <updated>2019-01-23T03:22:28.042Z</updated>
+  <updated>2019-01-23T11:02:39.662Z</updated>
   <id>https://gandalfliang.github.io/</id>
   
   <author>
@@ -15,6 +15,27 @@
   </author>
   
   <generator uri="http://hexo.io/">Hexo</generator>
+  
+  <entry>
+    <title>Tags for the past Two years</title>
+    <link href="https://gandalfliang.github.io/2019/01/23/tags-for-the-past-two-years/"/>
+    <id>https://gandalfliang.github.io/2019/01/23/tags-for-the-past-two-years/</id>
+    <published>2019-01-23T10:56:15.000Z</published>
+    <updated>2019-01-23T11:02:39.662Z</updated>
+    
+    <content type="html"><![CDATA[<img src="/2019/01/23/tags-for-the-past-two-years/tags.png" alt="tags.png" title="">]]></content>
+    
+    <summary type="html">
+    
+      
+      
+        &lt;img src=&quot;/2019/01/23/tags-for-the-past-two-years/tags.png&quot; alt=&quot;tags.png&quot; title=&quot;&quot;&gt;
+      
+    
+    </summary>
+    
+    
+  </entry>
   
   <entry>
     <title>定位 C++/CLI 库的加载失败异常</title>
@@ -68,11 +89,11 @@
     
       <category term="C#" scheme="https://gandalfliang.github.io/tags/C/"/>
     
+      <category term="RyuJIT" scheme="https://gandalfliang.github.io/tags/RyuJIT/"/>
+    
       <category term="编译器优化" scheme="https://gandalfliang.github.io/tags/%E7%BC%96%E8%AF%91%E5%99%A8%E4%BC%98%E5%8C%96/"/>
     
       <category term="Loop Hoisting" scheme="https://gandalfliang.github.io/tags/Loop-Hoisting/"/>
-    
-      <category term="RyuJIT" scheme="https://gandalfliang.github.io/tags/RyuJIT/"/>
     
       <category term="Loop Invariant Hoisting" scheme="https://gandalfliang.github.io/tags/Loop-Invariant-Hoisting/"/>
     
@@ -206,7 +227,7 @@
     <link href="https://gandalfliang.github.io/2018/06/01/debugging-mlt/"/>
     <id>https://gandalfliang.github.io/2018/06/01/debugging-mlt/</id>
     <published>2018-06-01T05:32:41.000Z</published>
-    <updated>2018-07-16T02:05:26.961Z</updated>
+    <updated>2019-01-23T11:00:21.035Z</updated>
     
     <content type="html"><![CDATA[<p><a href="https://www.mltframework.org/" target="_blank" rel="external"><code>Mlt framework</code></a> 是一个开源跨平台的多媒体处理框架，使用模块化的设计，集成了大量的业界领先的视频处理框架，如ffmpeg，良好的设计，可以方便的集成自己的模块进去，利用它，你可以实现自己的 Adobe Premiere 等非线性多媒体编辑软件或者视频播放器，简单几句代码为视频添加炫酷的转场效果和滤镜。 </p><p>由于跨平台，项目通过configure的方式来管理工程，对于学习来说多媒体框架来说，调试起来并不方便，我整理了CMake的脚本，可以通过cmake来生成我们熟悉的 Visual Studio 或者 Xcode<br>工程，方便调试。  </p><p>在阅读下面文章之前，请确保你有一定的 MinGW 工具链使用经验。 </p><h3 id="下载源码"><a href="#下载源码" class="headerlink" title="下载源码"></a>下载源码</h3><p><a href="https://github.com/gandalfliang/mlt" target="_blank" rel="external">https://github.com/gandalfliang/mlt</a><br>分支：cmake</p><h3 id="配置环境"><a href="#配置环境" class="headerlink" title="配置环境"></a>配置环境</h3><p>对于 Windows 平台：  </p><ol><li>cmake</li><li>MinGW </li><li>msys2</li><li>Windows SDK  </li></ol><p>确保MinGW和msys2里的工具链路径在系统变量PATH中</p><p>Mac 平台：</p><ol><li>Xcode  </li></ol><h3 id="Bootstrap"><a href="#Bootstrap" class="headerlink" title="Bootstrap"></a>Bootstrap</h3><p>在工程跟目录，运行脚本（如果是 Windows 平台，从开发者命令行工具运行）：<br><figure class="highlight python"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">py bootstrap.py</div></pre></td></tr></table></figure></p><p>如果一切顺利，工程文件将会在 <code>build/win32</code> 或者 <code>build/mac</code> 下。脚本运行要拉取ffmpeg的源码并configure，这是一个耗时的工作。在Windows平台下configure ffmpeg将是一个漫长的等待，没事的话，去喝杯咖啡，或者有空的时候在命令窗里敲一下enter键，可能会有收获哦。</p><p>完成后，你就可以愉快的调试这个框架了。 </p><img src="/2018/06/01/debugging-mlt/mac.png" alt="mac.png" title="">]]></content>
     
@@ -491,7 +512,7 @@
     <link href="https://gandalfliang.github.io/2017/10/20/Timelapse2/"/>
     <id>https://gandalfliang.github.io/2017/10/20/Timelapse2/</id>
     <published>2017-10-20T12:33:39.000Z</published>
-    <updated>2019-01-23T10:48:18.317Z</updated>
+    <updated>2019-01-23T10:56:34.338Z</updated>
     
     <content type="html"><![CDATA[<p>Lens: Nikkor 24-mm F2.8<br>f2.8  70mm  ISO400  </p><video src="./gz_timelapse_cold_signature.mp4" type="video/mp4" controls></video>]]></content>
     
@@ -579,38 +600,6 @@
       <category term="DirectX" scheme="https://gandalfliang.github.io/tags/DirectX/"/>
     
       <category term="D3DImage" scheme="https://gandalfliang.github.io/tags/D3DImage/"/>
-    
-  </entry>
-  
-  <entry>
-    <title>FFmpeg 入门</title>
-    <link href="https://gandalfliang.github.io/2017/08/18/FFmpegCookbook_1/"/>
-    <id>https://gandalfliang.github.io/2017/08/18/FFmpegCookbook_1/</id>
-    <published>2017-08-18T04:19:30.000Z</published>
-    <updated>2018-02-12T07:23:32.961Z</updated>
-    
-    <content type="html"><![CDATA[<p>废话少说，要解码一个视频帧，你需要这样做：</p><div id="flowchart-0" class="flow-chart"></div><p>获得帧数据后，用SDL还是直接用D3d渲染，那就看你自己了。<script src="https://cdnjs.cloudflare.com/ajax/libs/raphael/2.2.7/raphael.min.js"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/flowchart/1.6.5/flowchart.min.js"></script><textarea id="flowchart-0-code" style="display: none">st=>start: Starte=>end: Endo=>operation: 初始化av_register_all;avformat_network_init;o1=>operation: 打开文件:avformat_open_input;o2=>operation: 获取stream并打开符合的codec :avformat_find_stream_info;avcodec_find_decoder;avcodec_open2;o3=>operation: av_read_frame;avcodec_decode_video2;st->o->o1->o2->o3->e</textarea><textarea id="flowchart-0-options" style="display: none">{"scale":1,"line-width":2,"line-length":50,"text-margin":10,"font-size":12,"line-height":30}</textarea><script>  var code = document.getElementById("flowchart-0-code").value;  var options = JSON.parse(decodeURIComponent(document.getElementById("flowchart-0-options").value));  var diagram = flowchart.parse(code);  diagram.drawSVG("flowchart-0", options);</script></p>]]></content>
-    
-    <summary type="html">
-    
-      
-      
-        &lt;p&gt;废话少说，要解码一个视频帧，你需要这样做：&lt;/p&gt;
-&lt;div id=&quot;flowchart-0&quot; class=&quot;flow-chart&quot;&gt;&lt;/div&gt;
-
-&lt;p&gt;获得帧数据后，用SDL还是直接用D3d渲染，那就看你自己了。&lt;script src=&quot;https://cdnjs.cl
-      
-    
-    </summary>
-    
-      <category term="技术" scheme="https://gandalfliang.github.io/categories/%E6%8A%80%E6%9C%AF/"/>
-    
-    
-      <category term="FFmpeg" scheme="https://gandalfliang.github.io/tags/FFmpeg/"/>
-    
-      <category term="音视频" scheme="https://gandalfliang.github.io/tags/%E9%9F%B3%E8%A7%86%E9%A2%91/"/>
-    
-      <category term="解码" scheme="https://gandalfliang.github.io/tags/%E8%A7%A3%E7%A0%81/"/>
     
   </entry>
   

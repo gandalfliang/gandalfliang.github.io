@@ -151,7 +151,7 @@
         </div>
         <div class="article-info profile-block">
             <div class="article-info-block">
-                25
+                26
                 <span>文章</span>
             </div>
             <div class="article-info-block">
@@ -186,6 +186,121 @@
 
             
             <section id="main">
+    <article id="post-transparent_4k_window.translate" class="article article-type-post" itemscope itemprop="blogPost">
+    <div class="article-inner">
+        
+        
+            <header class="article-header">
+                
+    
+        <h1 itemprop="name">
+            <a class="article-title" href="/2018/02/16/transparent_4k_window.translate/">【翻译】关于 WPF 透明窗口的内存占用</a>
+        </h1>
+    
+
+                
+                    <div class="article-meta">
+                        
+    <div class="article-date">
+        <i class="fa fa-calendar"></i>
+        <a href="/2018/02/16/transparent_4k_window.translate/">
+            <time datetime="2018-02-16T15:01:38.000Z" itemprop="datePublished">2018-02-16</time>
+        </a>
+    </div>
+
+
+                        
+    <div class="article-category">
+    	<i class="fa fa-folder"></i>
+        <a class="article-category-link" href="/categories/翻译/">翻译</a>
+    </div>
+
+                        
+    <div class="article-tag">
+        <i class="fa fa-tag"></i>
+        <a class="tag-link" href="/tags/LayeredWindow/">LayeredWindow</a>, <a class="tag-link" href="/tags/Performance/">Performance</a>, <a class="tag-link" href="/tags/WPF/">WPF</a>, <a class="tag-link" href="/tags/翻译/">翻译</a>
+    </div>
+
+                    </div>
+                
+            </header>
+        
+        
+        <div class="article-entry" itemprop="articleBody">
+        
+            
+            <p>翻译自己的文章才是最骚的。。。  <a href="https://gandalfliang.github.io/2018/01/17/transparent_4k_window/">Origin Post</a></p>
+<hr>
+<p>要实现一个透明的 WPF 窗口？<br>多么简单的一个任务啊！只要设置 AllowTransparency 和 WindowStyle，你可以在毫秒间完成这个任务。  </p>
+<p><code>AllowTransparency=&quot;True&quot; WindowStyle=&quot;None&quot; Background=&quot;Transparent&quot;</code>   </p>
+<p>正确吧？当然。<br>但是（你懂得），打开你的任务管理器看看，简单的任务通常会带来大量的内存占用，特别是4K分辨率的透明窗口。100+ MB的内存被浪费了，就只为了显示一个空白的透明窗口！这是不可接受的。一年前，如果你说：”谁关心内存呀，现在的内存条太便宜了”，你可能是对的。但是查查这一年内存条的价格走向，它们现在贵上天了。</p>
+<h2 id="WPF-透明窗口的有趣小真相"><a href="#WPF-透明窗口的有趣小真相" class="headerlink" title="WPF 透明窗口的有趣小真相"></a>WPF 透明窗口的有趣小真相</h2><ul>
+<li><code>内存占用随着窗口尺寸增大而增加</code></li>
+<li><code>Win32 窗口没有这样的问题</code>  </li>
+</ul>
+<p>等等，什么？窗口越大，内存消耗的更多？嗯。。。这看起来很熟悉嘛，就像一个<code>Bitmap</code>。知道现在，我们并不知道 WPF 是如何处理透明窗口的，但是这种症状显示它就好像直接将整个桌面作为一个位图，然后窗口用这张位图的重叠部分作为其背景来更新自己，让它看起来是“透明”的。多么聪明的做法呀。。。<br>在 WPF 刚刚发布的那些日子里，低分辨率的计算机屏幕占据主流位置，即使在今天，大多数的笔记本电脑依然带着一块1366*768分辨率的屏幕被推向市场（离谱吧）。让我们唾弃那些OEM厂商讲的毫无根据的废话并且思考一下运行在高分辨率下的程序的情况。  </p>
+<h2 id="内存并不是免费的，不要浪费之"><a href="#内存并不是免费的，不要浪费之" class="headerlink" title="内存并不是免费的，不要浪费之"></a>内存并不是免费的，不要浪费之</h2><p>很显然，浪费100+MB的内存来显示一个4K的透明窗口是不可接受的，特别是和 Win32 窗口只占用10+MB的内存进行比较时。这差距让 WPF 看起来蠢透了。<br>抱怨已经够多了，想想对此我们能做什么呢？我可不想用C++和GDI将我的UI代码重写一遍，这太没效率并且也跟不上时代，况且，没人会为此“区区小事”去放弃他们漂亮、易于维护的Xaml UI代码。  </p>
+<h2 id="使用-Win32-承载-WPF-内容"><a href="#使用-Win32-承载-WPF-内容" class="headerlink" title="使用 Win32 承载 WPF 内容"></a>使用 Win32 承载 WPF 内容</h2><p>好吧，确实，没人愿意为了区区90MB内存去重写它们的UI。与使用C++重写UI所耗费的精力相比，这个内存的占用差距看起来是可以接受的（#笑脸）。但是请记住，我们一如既往的可以在 Win32 窗口中承载 WPF 的内容。<br>例如，我们想创建一个全屏、半透明背景带着非透明内容的对话框。为了规避 WPF 透明窗口的内存问题，我们可以使用 Win32 创建一个半透明的窗口：<br><figure class="highlight javascript"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div></pre></td><td class="code"><pre><div class="line">DWORD Flags1 = WS_EX_LAYERED;</div><div class="line">DWORD Flags2 = WS_POPUP;</div><div class="line"></div><div class="line">HWND hWnd = CreateWindowEx(Flags1,szWindowClass, szTitle, Flags2,</div><div class="line">    CW_USEDEFAULT, <span class="number">0</span>, <span class="number">3840</span>,<span class="number">2160</span>, nullptr, nullptr, hInstance, nullptr);</div><div class="line"></div><div class="line">SetLayeredWindowAttributes(hWnd, RRR, (BYTE)<span class="number">125</span>, LWA_ALPHA);</div><div class="line">ShowWindow(hWnd, nCmdShow);</div><div class="line">UpdateWindow(hWnd);</div><div class="line"></div><div class="line"><span class="keyword">case</span> WM_ERASEBKGND:</div><div class="line">    RECT rect;</div><div class="line">    GetClientRect(hWnd, &amp;rect);</div><div class="line">    FillRect((HDC)wParam, &amp;rect, CreateSolidBrush(RGB(<span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>)));</div><div class="line">    <span class="keyword">break</span>;</div></pre></td></tr></table></figure></p>
+<p>通过启用 <code>C++/CLI</code>，我们可以直接访问 WPF 内容</p>
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div><div class="line">3</div><div class="line">4</div><div class="line">5</div><div class="line">6</div><div class="line">7</div><div class="line">8</div><div class="line">9</div><div class="line">10</div><div class="line">11</div><div class="line">12</div><div class="line">13</div><div class="line">14</div><div class="line">15</div><div class="line">16</div><div class="line">17</div><div class="line">18</div><div class="line">19</div><div class="line">20</div><div class="line">21</div><div class="line">22</div></pre></td><td class="code"><pre><div class="line">namespace ManagedCode</div><div class="line">&#123;</div><div class="line">    using namespace System;</div><div class="line">    using namespace System::Windows;</div><div class="line">    using namespace System::Windows::Interop;</div><div class="line">    using namespace System::Windows::Media;</div><div class="line"></div><div class="line">    HWND GetHwnd(HWND parent, int x, int y, int width, int height) &#123;</div><div class="line">    HwndSource^ source = gcnew HwndSource(</div><div class="line">        <span class="number">0</span>, <span class="comment">// class style  </span></div><div class="line">        WS_VISIBLE | WS_CHILD, <span class="comment">// style  </span></div><div class="line">        <span class="number">0</span>, <span class="comment">// exstyle  </span></div><div class="line">        x, y, width, height,</div><div class="line">        <span class="string">"hi"</span>, <span class="comment">// NAME  </span></div><div class="line">        IntPtr(parent)        <span class="comment">// parent window   </span></div><div class="line">    );</div><div class="line"></div><div class="line">    UIElement^ page = gcnew ManagedContent::WPFContent();</div><div class="line">    source-&gt;RootVisual = page;</div><div class="line">    <span class="keyword">return</span> (HWND)source-&gt;Handle.ToPointer();</div><div class="line">    &#125;</div><div class="line">&#125;</div></pre></td></tr></table></figure>
+<p>最后</p>
+<figure class="highlight javascript"><table><tr><td class="gutter"><pre><div class="line">1</div><div class="line">2</div></pre></td><td class="code"><pre><div class="line"><span class="comment">//managed content</span></div><div class="line">ManagedCode::GetHwnd(hWnd, <span class="number">0</span>, <span class="number">0</span>, <span class="number">200</span>, <span class="number">200</span>);</div></pre></td></tr></table></figure>
+<p>由于 WPF 和 GDI 背后的技术不尽相同，还有更多的工作需要做来解决不可避免的透明通道问题，但是，为了方便，你始终可以使用 Popup 来实现你的目标。</p>
+<hr>
+<p>Macbook Pro 2016 的键盘真垃圾。。。。。。</p>
+
+        
+        </div>
+        <footer class="article-footer">
+            <div class="share-container">
+
+
+    <div class="bdsharebuttonbox">
+    <a href="#" class="bds_more" data-cmd="more">分享到：</a>
+    <a href="#" class="bds_weixin" data-cmd="weixin" title="分享到微信">微信</a>    
+    <a href="#" class="bds_sqq" data-cmd="qzone" title="分享给QQ好友">QQ</a>
+    <a href="#" class="bds_tsina" data-cmd="tsina" title="分享到新浪微博">新浪微博</a>
+</div>
+<script>
+window._bd_share_config={"common":{"bdSnsKey":{},"bdText":"","bdMini":"2","bdMiniList":false,"bdPic":"","bdStyle":"0","bdSize":"16"},"share":{"bdSize":16}};with(document)0[(getElementsByTagName('head')[0]||body).appendChild(createElement('script')).src='http://bdimg.share.baidu.com/static/api/js/share.js?v=89860593.js?cdnversion='+~(-new Date()/36e5)];
+</script>
+<style>
+    .bdshare_popup_box {
+        border-radius: 4px;
+        border: #e1e1e1 solid 1px;
+    }
+    .bdshare-button-style0-16 a,
+    .bdshare-button-style0-16 .bds_more {
+        padding-left: 20px;
+        margin: 6px 10px 6px 0;
+    }
+    .bdshare_dialog_list a,
+    .bdshare_popup_list a,
+    .bdshare_popup_bottom a {
+        font-family: 'Microsoft Yahei';
+    }
+    .bdshare_popup_top {
+        display: none;
+    }
+    .bdshare_popup_bottom {
+        height: auto;
+        padding: 5px;
+    }
+</style>
+
+
+</div>
+
+            
+    
+
+        </footer>
+    </div>
+    
+</article>
+
+
+
     <article id="post-lightweighted_shadoweffect" class="article article-type-post" itemscope itemprop="blogPost">
     <div class="article-inner">
         
@@ -1168,119 +1283,6 @@ window._bd_share_config={"common":{"bdSnsKey":{},"bdText":"","bdMini":"2","bdMin
 
 
 
-    <article id="post-FFmpegCookbook_1" class="article article-type-post" itemscope itemprop="blogPost">
-    <div class="article-inner">
-        
-        
-            <header class="article-header">
-                
-    
-        <h1 itemprop="name">
-            <a class="article-title" href="/2017/08/18/FFmpegCookbook_1/">FFmpeg 入门</a>
-        </h1>
-    
-
-                
-                    <div class="article-meta">
-                        
-    <div class="article-date">
-        <i class="fa fa-calendar"></i>
-        <a href="/2017/08/18/FFmpegCookbook_1/">
-            <time datetime="2017-08-18T04:19:30.000Z" itemprop="datePublished">2017-08-18</time>
-        </a>
-    </div>
-
-
-                        
-    <div class="article-category">
-    	<i class="fa fa-folder"></i>
-        <a class="article-category-link" href="/categories/技术/">技术</a>
-    </div>
-
-                        
-    <div class="article-tag">
-        <i class="fa fa-tag"></i>
-        <a class="tag-link" href="/tags/FFmpeg/">FFmpeg</a>, <a class="tag-link" href="/tags/解码/">解码</a>, <a class="tag-link" href="/tags/音视频/">音视频</a>
-    </div>
-
-                    </div>
-                
-            </header>
-        
-        
-        <div class="article-entry" itemprop="articleBody">
-        
-            
-            <p>废话少说，要解码一个视频帧，你需要这样做：</p>
-<div id="flowchart-0" class="flow-chart"></div>
-
-<p>获得帧数据后，用SDL还是直接用D3d渲染，那就看你自己了。<script src="https://cdnjs.cloudflare.com/ajax/libs/raphael/2.2.7/raphael.min.js"></script><script src="https://cdnjs.cloudflare.com/ajax/libs/flowchart/1.6.5/flowchart.min.js"></script><textarea id="flowchart-0-code" style="display: none">st=>start: Start
-e=>end: End
-o=>operation: 初始化
-av_register_all;
-avformat_network_init;
-o1=>operation: 打开文件:
-avformat_open_input;
-o2=>operation: 获取stream并打开符合的codec :
-avformat_find_stream_info;
-avcodec_find_decoder;
-avcodec_open2;
-o3=>operation: av_read_frame;
-avcodec_decode_video2;
-st->o->o1->o2->o3->e</textarea><textarea id="flowchart-0-options" style="display: none">{"scale":1,"line-width":2,"line-length":50,"text-margin":10,"font-size":12,"line-height":30}</textarea><script>  var code = document.getElementById("flowchart-0-code").value;  var options = JSON.parse(decodeURIComponent(document.getElementById("flowchart-0-options").value));  var diagram = flowchart.parse(code);  diagram.drawSVG("flowchart-0", options);</script></p>
-
-        
-        </div>
-        <footer class="article-footer">
-            <div class="share-container">
-
-
-    <div class="bdsharebuttonbox">
-    <a href="#" class="bds_more" data-cmd="more">分享到：</a>
-    <a href="#" class="bds_weixin" data-cmd="weixin" title="分享到微信">微信</a>    
-    <a href="#" class="bds_sqq" data-cmd="qzone" title="分享给QQ好友">QQ</a>
-    <a href="#" class="bds_tsina" data-cmd="tsina" title="分享到新浪微博">新浪微博</a>
-</div>
-<script>
-window._bd_share_config={"common":{"bdSnsKey":{},"bdText":"","bdMini":"2","bdMiniList":false,"bdPic":"","bdStyle":"0","bdSize":"16"},"share":{"bdSize":16}};with(document)0[(getElementsByTagName('head')[0]||body).appendChild(createElement('script')).src='http://bdimg.share.baidu.com/static/api/js/share.js?v=89860593.js?cdnversion='+~(-new Date()/36e5)];
-</script>
-<style>
-    .bdshare_popup_box {
-        border-radius: 4px;
-        border: #e1e1e1 solid 1px;
-    }
-    .bdshare-button-style0-16 a,
-    .bdshare-button-style0-16 .bds_more {
-        padding-left: 20px;
-        margin: 6px 10px 6px 0;
-    }
-    .bdshare_dialog_list a,
-    .bdshare_popup_list a,
-    .bdshare_popup_bottom a {
-        font-family: 'Microsoft Yahei';
-    }
-    .bdshare_popup_top {
-        display: none;
-    }
-    .bdshare_popup_bottom {
-        height: auto;
-        padding: 5px;
-    }
-</style>
-
-
-</div>
-
-            
-    
-
-        </footer>
-    </div>
-    
-</article>
-
-
-
     <nav id="page-nav">
         <a class="extend prev" rel="prev" href="/">&laquo; 上一页</a><a class="page-number" href="/">1</a><span class="page-number current">2</span><a class="page-number" href="/page/3/">3</a><a class="extend next" rel="next" href="/page/3/">下一页 &raquo;</a>
     </nav>
@@ -1293,6 +1295,25 @@ window._bd_share_config={"common":{"bdSnsKey":{},"bdText":"","bdMini":"2","bdMin
         <h3 class="widget-title">最新文章</h3>
         <div class="widget">
             <ul id="recent-post" class="">
+                
+                    <li>
+                        
+                        <div class="item-thumbnail">
+                            <a href="/2019/01/23/tags-for-the-past-two-years/" class="thumbnail">
+    
+    
+        <span class="thumbnail-image thumbnail-none"></span>
+    
+</a>
+
+                        </div>
+                        
+                        <div class="item-inner">
+                            <!-- <p class="item-category"></p> -->
+                            <p class="item-title"><a href="/2019/01/23/tags-for-the-past-two-years/" class="title">Tags for the past Two years</a></p>
+                            <p class="item-date"><time datetime="2019-01-23T10:56:15.000Z" itemprop="datePublished">2019-01-23</time></p>
+                        </div>
+                    </li>
                 
                     <li>
                         
@@ -1370,25 +1391,6 @@ window._bd_share_config={"common":{"bdSnsKey":{},"bdText":"","bdMini":"2","bdMin
                         </div>
                     </li>
                 
-                    <li>
-                        
-                        <div class="item-thumbnail">
-                            <a href="/2018/08/23/tail-recursion/" class="thumbnail">
-    
-    
-        <span style="background-image:url(https://avatars2.githubusercontent.com/u/9141961?s=200&amp;v=4)" alt="C# 尾递归优化" class="thumbnail-image"></span>
-    
-</a>
-
-                        </div>
-                        
-                        <div class="item-inner">
-                            <!-- <p class="item-category"><a class="article-category-link" href="/categories/技术/">技术</a></p> -->
-                            <p class="item-title"><a href="/2018/08/23/tail-recursion/" class="title">C# 尾递归优化</a></p>
-                            <p class="item-date"><time datetime="2018-08-22T16:41:31.000Z" itemprop="datePublished">2018-08-23</time></p>
-                        </div>
-                    </li>
-                
             </ul>
         </div>
     </div>
@@ -1407,7 +1409,7 @@ window._bd_share_config={"common":{"bdSnsKey":{},"bdText":"","bdMini":"2","bdMin
     <div class="widget-wrap">
         <h3 class="widget-title">归档</h3>
         <div class="widget">
-            <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/01/">一月 2019</a><span class="archive-list-count">3</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/12/">十二月 2018</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/08/">八月 2018</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/07/">七月 2018</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/06/">六月 2018</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/04/">四月 2018</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/03/">三月 2018</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/02/">二月 2018</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/01/">一月 2018</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/12/">十二月 2017</a><span class="archive-list-count">3</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/10/">十月 2017</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/09/">九月 2017</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/08/">八月 2017</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/06/">六月 2017</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/05/">五月 2017</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/03/">三月 2017</a><span class="archive-list-count">3</span></li></ul>
+            <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/archives/2019/01/">一月 2019</a><span class="archive-list-count">4</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/12/">十二月 2018</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/08/">八月 2018</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/07/">七月 2018</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/06/">六月 2018</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/04/">四月 2018</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/03/">三月 2018</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/02/">二月 2018</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2018/01/">一月 2018</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/12/">十二月 2017</a><span class="archive-list-count">3</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/10/">十月 2017</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/09/">九月 2017</a><span class="archive-list-count">2</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/08/">八月 2017</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/06/">六月 2017</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/05/">五月 2017</a><span class="archive-list-count">1</span></li><li class="archive-list-item"><a class="archive-list-link" href="/archives/2017/03/">三月 2017</a><span class="archive-list-count">3</span></li></ul>
         </div>
     </div>
 
