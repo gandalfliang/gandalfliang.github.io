@@ -68,11 +68,11 @@
     
       <category term="C#" scheme="https://gandalfliang.github.io/tags/C/"/>
     
-      <category term="RyuJIT" scheme="https://gandalfliang.github.io/tags/RyuJIT/"/>
-    
       <category term="编译器优化" scheme="https://gandalfliang.github.io/tags/%E7%BC%96%E8%AF%91%E5%99%A8%E4%BC%98%E5%8C%96/"/>
     
       <category term="Loop Hoisting" scheme="https://gandalfliang.github.io/tags/Loop-Hoisting/"/>
+    
+      <category term="RyuJIT" scheme="https://gandalfliang.github.io/tags/RyuJIT/"/>
     
       <category term="Loop Invariant Hoisting" scheme="https://gandalfliang.github.io/tags/Loop-Invariant-Hoisting/"/>
     
@@ -491,15 +491,18 @@
     <link href="https://gandalfliang.github.io/2017/10/20/Timelapse2/"/>
     <id>https://gandalfliang.github.io/2017/10/20/Timelapse2/</id>
     <published>2017-10-20T12:33:39.000Z</published>
-    <updated>2019-01-10T12:31:15.733Z</updated>
+    <updated>2019-01-23T10:48:18.317Z</updated>
     
-    <content type="html"><![CDATA[<p>Lens: Nikkor 24-70mm F2.8<br>f2.8  70mm  ISO400<br><div class="video-container"><iframe src="//player.vimeo.com/video/gz_timelapse_cold_signature.mp4" frameborder="0" allowfullscreen></iframe></div></p>]]></content>
+    <content type="html"><![CDATA[<p>Lens: Nikkor 24-mm F2.8<br>f2.8  70mm  ISO400  </p><video src="./gz_timelapse_cold_signature.mp4" type="video/mp4" controls></video>]]></content>
     
     <summary type="html">
     
       
       
-        &lt;p&gt;Lens: Nikkor 24-70mm F2.8&lt;br&gt;f2.8  70mm  ISO400&lt;br&gt;&lt;div class=&quot;video-container&quot;&gt;&lt;iframe src=&quot;//player.vimeo.com/video/gz_timelapse_cold_s
+        &lt;p&gt;Lens: Nikkor 24-mm F2.8&lt;br&gt;f2.8  70mm  ISO400  &lt;/p&gt;
+&lt;video src=&quot;./gz_timelapse_cold_signature.mp4&quot; type=&quot;video/mp4&quot; controls&gt;&lt;/video&gt;
+
+
       
     
     </summary>
