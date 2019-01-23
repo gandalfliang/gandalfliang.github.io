@@ -229,7 +229,7 @@
         <div class="article-entry" itemprop="articleBody">
         
             
-            <p>.NET Framework 程序在加载 C++/CLI 动态库的时候，出现 <code>FileLoadException</code>，常见错误是其中某些依赖没有找到，这个时候异常信息应该是类似：一个xxx的依赖没有找到；这个问题很好解决，确定缺少的依赖补充上就可以了，可以使用 <code>dumpbin</code> 工具查看相关的依赖：<br><figure class="highlight javascript"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">dumpbin /dependents target.dll</div></pre></td></tr></table></figure></p>
+            <p>程序在加载 C++/CLI 动态库的时候，出现 <code>FileLoadException</code>，常见错误是其中某些依赖没有找到，这个时候异常信息应该是类似：一个xxx的依赖没有找到；这个问题很好解决，确定缺少的依赖补充上就可以了，可以使用 <code>dumpbin</code> 工具查看相关的依赖：<br><figure class="highlight javascript"><table><tr><td class="gutter"><pre><div class="line">1</div></pre></td><td class="code"><pre><div class="line">dumpbin /dependents target.dll</div></pre></td></tr></table></figure></p>
 <p>但是，有一种比较隐晦的错误导致动态库加载失败，错误提示：<code>未能加载由xxx.dll导入的过程</code>，除了这些，几乎没有什么有用的错误信息让我们来确定到底出现了什么问题。一般来说，按照目前我遇到的问题，这个一般都是对应的库文件调用了当前平台不支持的api导致的。当然，这个问题不易在开发的机器上发现，因为能调用到这个api就代表调试机器上有对应平台版本的SDK，一般如果前期没有发现到这个问题，那么问题被发现时肯定是在生成环境，所以需要开发人员注意调用接口的支持平台。  </p>
 <p>要定位是什么接口导致的问题，需要借助其他的调试工具来排查。微软的 Windows SDK 提供了对应的工具 <code>gflags.exe</code>，借助这个工具，我们可以在调试的过程中看到详细的动态库加载信息，在这些信息中可以定位到底是什么接口导致库文件加载失败。当然，你需要在出现问题的机器上使用这个工具进行操作，并通过 Visual Studio 进行远程调试。  </p>
 <img src="/2019/01/22/c-cli-debug-assembly-load-error/gflags.png" alt="gflags.png" title="">  
